@@ -1,0 +1,66 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+.pdm/
+.pdm.toml
+uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+.coverage
+coverage.xml
+*.cover
+
+# Node (for web/desktop app)
+node_modules/
+dist/
+electron-dist/
+*.tsbuildinfo
+
+# Electron
+out/
+electron-builder.log
+
+# Coding Tool Setups
+.claude/
+
+# Old mobile app (to be removed)
+old_apps_to_delete/
+
+# Electron
+electron-dist/
+electron-builder.log

@@ -1,0 +1,46 @@
+{
+  "name": "visualize-mechanics-desktop",
+  "version": "1.0.0",
+  "description": "Desktop application for visualizing physics problems with 3D animations",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron:dev": "concurrently \"cd frontend && npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "cd frontend && npm run build && electron-builder",
+    "electron:build:win": "cd frontend && npm run build && electron-builder --win",
+    "electron:build:mac": "cd frontend && npm run build && electron-builder --mac",
+    "electron:build:linux": "cd frontend && npm run build && electron-builder --linux"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "wait-on": "^9.1.0"
+  },
+  "build": {
+    "appId": "com.visualizemechanics.desktop",
+    "productName": "Visualize Mechanics",
+    "directories": {
+      "output": "electron-dist"
+    },
+    "files": [
+      "frontend/dist/**/*",
+      "electron/**/*",
+      "backend/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
