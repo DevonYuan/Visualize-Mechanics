@@ -1,6 +1,6 @@
 # Visualize Mechanics
 
-A desktop application that transforms physics problem photos into interactive 3D animations with worked solutions. Built for high school mechanics (kinematics, forces, energy). 
+A desktop application that transforms physics problem photos into interactive 3D animations with worked solutions. Built for high school mechanics (kinematics, forces, energy).
 
 **Key Features:**
 - **Desktop-first design** with Electron wrapping for cross-platform support
@@ -51,17 +51,17 @@ Photo → Vision Model (extract problem text/diagram)
 
 ```mermaid
 flowchart LR
-    A[React + Electron<br/>(Vite)] --> B[Backend API<br/>(FastAPI)]
-    B --> C[AI Model APIs<br/>Vision + Reasoning]
+    A[React + Electron (Vite)] --> B[Backend API (FastAPI)]
+    B --> C[AI Model APIs (Vision + Reasoning)]
     
-    B -.-> D[Stateless, no DB, no queue<br/>Proxy only: forwards photo → Model → returns JSON]
+    B -.-> D[Stateless, no DB, no queue. Proxy only: forwards photo → Model → returns JSON]
 ```
 
 ### Data Flow
 1. **User** snaps photo of physics problem
 2. **Frontend** uploads to backend `/api/problems`
 3. **Backend** processes image → calls AI Vision → extracts problem text & diagram
-4. **Backend** calls AI Reasoning → classes scenario, computes solution
+4. **Backend** calls AI Reasoning → classifies scenario, computes solution
 5. **Backend** returns structured JSON:
    ```json
    {
@@ -142,9 +142,9 @@ flowchart TB
 - [ ] **Cloud Option**: Create NVIDIA account & get NGC API key for NIM endpoints
 - [ ] **Local Option**: Set up local model server (Ollama, LocalAI, or custom)
 
-### 2. Infrastructure (Minimal)
+### 2. Infrastructure (Minimal - Desktop Only)
 - [ ] **Desktop**: Electron builds for Windows/Mac/Linux
-- [ ] **Backend Hosting**: Optional - can run locally or deploy to Render, Railway, Fly.io
+- [ ] **Backend**: Runs locally via Electron subprocess (no separate hosting needed)
 
 ### 3. AI Prompt Engineering
 - [ ] Design **Vision prompt**: Extract structured problem from photo (text + diagram → JSON)
@@ -154,6 +154,7 @@ flowchart TB
 
 ### 4. Animation Library (Pre-built Scenes)
 Define reusable r3f scenes for each scenario:
+
 | Scenario | Key Variables | Animation Spec |
 |----------|---------------|----------------|
 | Projectile motion | `x, y, vx, vy, t` | Parabolic trajectory |
@@ -176,7 +177,7 @@ npm install
 
 # 3. Backend
 cd backend
-cp .env.example .env  # Add AI_API_KEY only
+cp .env.example .env  # Add AI_API_KEY or configure local models
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -e .
@@ -185,7 +186,7 @@ uvicorn app.main:app --reload
 # 4. Frontend
 cd ../frontend
 npm install
-npm run dev           # Web dev server
+npm run dev           # Web dev server (optional, for web preview)
 
 # 5. Electron (for full desktop app)
 cd ..
@@ -203,13 +204,15 @@ NIM_API_KEY=nvapi-xxxxx
 NIM_VISION_MODEL=nvidia/llama-3.2-90b-vision-instruct
 NIM_REASONING_MODEL=nvidia/nemotron-3-ultra
 
-# OR Local option (BYOK)
-LOCAL_MODEL_URL=http://localhost:11434  # Ollama example
+# OR Local option (BYOK) - e.g., Ollama
+LOCAL_MODEL_URL=http://localhost:11434
 LOCAL_VISION_MODEL=llava
 LOCAL_REASONING_MODEL=llama3.1
 
 # Common
 PORT=3000
+HOST=0.0.0.0
+CORS_ORIGINS=*
 ```
 
 ### Frontend (`frontend/.env`)
@@ -234,7 +237,7 @@ VITE_ENABLE_LOCAL_MODELS=false  # Set to true for local model support
 
 ## Implementation Phases
 
-### Phase 0: Foundation & Prompt Engineering (Week 1)
+### Phase 0: Foundation & Prompt Engineering
 - [ ] Set up monorepo structure (backend + frontend)
 - [ ] Scaffold backend (FastAPI + Python) with `POST /api/solve` endpoint
 - [ ] Scaffold React + Electron app with file upload
@@ -244,15 +247,16 @@ VITE_ENABLE_LOCAL_MODELS=false  # Set to true for local model support
   - Reasoning prompt: problem JSON → scenario classification + equations + time-series + worked solution
 - [ ] Build eval set (20-30 diverse mechanics problems) + test harness
 
-### Phase 1: Backend AI Pipeline (Week 2)
-- [ ] Implement AI client with retry/timeout/error handling (httpx + tenacity)
-- [ ] Wire Vision → Reasoning pipeline in `/api/solve`
-- [ ] Define strict Pydantic response schema (validation + serialization)
-- [ ] Add image preprocessing (Pillow: resize, compress, base64)
-- [ ] Test end-to-end with eval set, measure accuracy/latency
-- [ ] Deploy backend (optional - can run locally)
+### Phase 1: Backend AI Pipeline (COMPLETE)
+- [x] Implement AI client with retry/timeout/error handling (httpx + tenacity)
+- [x] Wire Vision → Reasoning pipeline in `/api/solve`
+- [x] Define strict Pydantic response schema (validation + serialization)
+- [x] Add image preprocessing (Pillow: resize, compress, base64)
+- [x] **Add calculation validation + retry loop** (prevents formula hallucinations)
+- [x] Test end-to-end with eval set, measure accuracy/latency
+- [ ] **Deploy backend**: N/A — runs locally via Electron
 
-### Phase 2: Core Web App + 3D Scenes (Week 3)
+### Phase 2: Core Web App + 3D Scenes
 - [ ] Build React app screens: Upload → Loading → Result
 - [ ] Implement shared types between backend and frontend
 - [ ] Create r3f scene components for **2-3 core scenarios** (projectile, 1D motion, inclined plane)
@@ -261,7 +265,7 @@ VITE_ENABLE_LOCAL_MODELS=false  # Set to true for local model support
 - [ ] Polish UI: loading states, error handling, variable value overlay
 - [ ] Integrate Electron wrapper for desktop app
 
-### Phase 3: Polish & Ship (Week 4)
+### Phase 3: Polish & Ship
 - [ ] Add remaining scenarios (Atwood, energy conservation)
 - [ ] Expand eval set, improve prompt accuracy
 - [ ] Performance: optimize r3f render loop, memoize timeSeries lookups
