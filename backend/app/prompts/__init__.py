@@ -9,4 +9,7 @@ with open(PROMPTS_DIR / "vision.txt", "r") as f:
 with open(PROMPTS_DIR / "reasoning.txt", "r") as f:
     REASONING_PROMPT = f.read()
 
-__all__ = ["VISION_PROMPT", "REASONING_PROMPT"]
+with open(PROMPTS_DIR / "formulas_reference.txt", "r") as f:
+    FORMULAS_REFERENCE = f.read()
+
+__all__ = ["VISION_PROMPT", "REASONING_PROMPT", "FORMULAS_REFERENCE"]

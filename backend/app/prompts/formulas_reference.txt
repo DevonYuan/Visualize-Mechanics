@@ -1,0 +1,172 @@
+# PHYSICS FORMULAS REFERENCE - HIGH SCHOOL MECHANICS
+# Use these formulas when solving problems. Compute values using the calculator tool.
+
+## KINEMATICS (1D & 2D)
+
+### Constant Acceleration (1D)
+- v = v0 + a * t
+- x = x0 + v0 * t + 0.5 * a * t^2
+- v^2 = v0^2 + 2 * a * (x - x0)
+- Average velocity: v_avg = (v0 + v) / 2
+- Displacement: Delta_x = v_avg * t
+
+### Projectile Motion (2D)
+- v0x = v0 * cos(theta)
+- v0y = v0 * sin(theta)
+- x = v0x * t
+- y = y0 + v0y * t - 0.5 * g * t^2
+- vx = v0x (constant)
+- vy = v0y - g * t
+- Time of flight (from ground): t_flight = 2 * v0 * sin(theta) / g
+- Time of flight (from height h): t_flight = (v0y + sqrt(v0y^2 + 2 * g * h)) / g
+- Range: R = v0x * t_flight
+- Max height: h_max = y0 + v0y^2 / (2 * g)
+- Velocity magnitude: v = sqrt(vx^2 + vy^2)
+
+## DYNAMICS / FORCES
+
+### Newton's Laws
+- F_net = m * a
+- F_g = m * g (weight)
+- F_normal: perpendicular to surface
+- F_friction = mu * F_normal
+  - Static: f_s <= mu_s * N
+  - Kinetic: f_k = mu_k * N
+- Tension in massless string: same throughout
+
+### Inclined Plane (angle theta)
+- Weight component parallel: m * g * sin(theta) (down the incline)
+- Weight component perpendicular: m * g * cos(theta) (into the incline)
+- Normal force: N = m * g * cos(theta) (if no other vertical forces)
+- Acceleration down frictionless incline: a = g * sin(theta)
+- Acceleration with kinetic friction: a = g * (sin(theta) - mu_k * cos(theta))
+- Static friction holds if: tan(theta) <= mu_s
+
+### Atwood Machine
+- Two masses m1, m2 over massless pulley:
+  - a = (m1 - m2) * g / (m1 + m2)  (positive = m1 down)
+  - T = 2 * m1 * m2 * g / (m1 + m2)
+- With massive pulley (mass M, radius R, I = 0.5 * M * R^2):
+  - a = (m1 - m2) * g / (m1 + m2 + 0.5 * M)
+  - T1 = m1 * (g - a)
+  - T2 = m2 * (g + a)
+
+### Connected Objects / Pulleys
+- For system of masses: a = F_net_external / total_mass
+- Internal tensions cancel
+
+## WORK, ENERGY, POWER
+
+### Work
+- W = F * d * cos(theta)
+- W = integral F * dx (variable force)
+- Work-Energy Theorem: W_net = Delta_K = 0.5 * m * (v^2 - v0^2)
+
+### Energy
+- Kinetic: K = 0.5 * m * v^2
+- Rotational kinetic: K_rot = 0.5 * I * omega^2
+- Potential (gravitational): U_g = m * g * h
+- Potential (spring): U_s = 0.5 * k * x^2
+- Total mechanical: E = K + U
+- Conservation: E_i = E_f (if no non-conservative work)
+- With non-conservative: W_nc = Delta_E = Delta_K + Delta_U
+
+### Power
+- P = dW/dt = F * v
+- Average power: P_avg = W / Delta_t
+
+## MOMENTUM & COLLISIONS
+
+### Linear Momentum
+- p = m * v
+- Impulse: J = integral F * dt = Delta_p
+- F_avg = Delta_p / Delta_t
+
+### Collisions (1D)
+- Conservation of momentum: m1 * v1_i + m2 * v2_i = m1 * v1_f + m2 * v2_f
+- Coefficient of restitution: e = (v2_f - v1_f) / (v1_i - v2_i)
+  - e = 1: perfectly elastic (KE conserved)
+  - e = 0: perfectly inelastic (stick together)
+  - 0 < e < 1: partially elastic
+- Elastic collision formulas:
+  - v1_f = (m1 - m2) / (m1 + m2) * v1_i + 2 * m2 / (m1 + m2) * v2_i
+  - v2_f = 2 * m1 / (m1 + m2) * v1_i + (m2 - m1) / (m1 + m2) * v2_i
+- Perfectly inelastic (stick): v_f = (m1 * v1_i + m2 * v2_i) / (m1 + m2)
+- KE loss in perfectly inelastic: Delta_K = -0.5 * m1 * m2 / (m1 + m2) * (v1_i - v2_i)^2
+
+## ROTATIONAL MOTION
+
+### Kinematics (constant alpha)
+- omega = omega0 + alpha * t
+- theta = theta0 + omega0 * t + 0.5 * alpha * t^2
+- omega^2 = omega0^2 + 2 * alpha * (theta - theta0)
+- theta = (omega0 + omega) / 2 * t
+
+### Dynamics
+- Torque: tau = r x F = r * F * sin(phi)
+- tau_net = I * alpha
+- Moment of inertia: I = sum(m * r^2)
+  - Point mass: I = m * r^2
+  - Solid cylinder/disk: I = 0.5 * M * R^2
+  - Hollow cylinder/hoop: I = M * R^2
+  - Solid sphere: I = 0.4 * M * R^2
+  - Thin rod about center: I = (1/12) * M * L^2
+  - Thin rod about end: I = (1/3) * M * L^2
+- Parallel axis: I = I_cm + M * d^2
+
+### Rotational Energy
+- K_rot = 0.5 * I * omega^2
+- Work by torque: W = integral tau * dtheta = tau * Delta_theta (constant tau)
+- Power: P = tau * omega
+
+### Rolling Without Slipping
+- v_cm = omega * R
+- a_cm = alpha * R
+- Friction: static, does no work
+- Total KE = 0.5 * M * v_cm^2 + 0.5 * I_cm * omega^2
+- For rolling down incline: a = g * sin(theta) / (1 + I_cm / (M * R^2))
+
+## OSCILLATIONS (Mass-Spring)
+
+### Simple Harmonic Motion
+- F = -k * x (Hooke's Law)
+- omega = sqrt(k / m)  (angular frequency)
+- f = omega / (2 * pi) = 1 / (2 * pi) * sqrt(k / m)  (frequency)
+- T = 2 * pi / omega = 2 * pi * sqrt(m / k)  (period)
+- x(t) = A * cos(omega * t + phi)  or  A * sin(omega * t + phi')
+- v(t) = -A * omega * sin(omega * t + phi)
+- a(t) = -A * omega^2 * cos(omega * t + phi) = -omega^2 * x
+- Max speed: v_max = A * omega
+- Max acceleration: a_max = A * omega^2
+
+### Energy in SHM
+- Total: E = 0.5 * k * A^2 = 0.5 * m * v_max^2
+- K = 0.5 * m * v^2
+- U = 0.5 * k * x^2
+- E = K + U (constant)
+
+### Damped Oscillations
+- F_damp = -b * v
+- m * x'' + b * x' + k * x = 0
+- Underdamped (b < 2 * sqrt(m * k)): x = A * e^(-b * t / 2m) * cos(omega' * t + phi), omega' = sqrt(k/m - b^2/4m^2)
+- Critically damped (b = 2 * sqrt(m * k)): x = (A + B*t) * e^(-b * t / 2m)
+- Overdamped (b > 2 * sqrt(m * k)): sum of two exponentials
+
+### Vertical Spring
+- Equilibrium extension: x_eq = m * g / k
+- Same omega = sqrt(k / m) as horizontal
+- Measure x from new equilibrium
+
+## UNIVERSAL CONSTANTS
+- g = 9.8 m/s^2 (standard gravity)
+- G = 6.674e-11 N * m^2 / kg^2 (gravitational constant)
+- pi = 3.14159
+
+## USAGE NOTES
+1. ALWAYS use SI units (m, kg, s, N, J, rad)
+2. Convert all inputs to SI before calculating
+3. Use the calculator tool for ALL numerical computations
+4. For trig: use radians in calculations, degrees for display
+5. Double-check signs (coordinate system conventions)
+6. Verify dimensional consistency
+7. Round final answers to 2-3 significant figures
