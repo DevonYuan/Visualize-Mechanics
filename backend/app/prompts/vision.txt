@@ -16,6 +16,22 @@ Scenario types:
 - mass_spring: Mass on spring oscillating
 - energy_conservation: Roller coaster, pendulum, spring - energy transforms
 
+IMPORTANT EXTRACTION RULES:
+- "initially at rest" or "starts from rest" → v0 = 0 m/s
+- "covers a distance of X m" → distance = X m (or d = X m)
+- "in Y s" or "time of Y s" → time = Y s (or t = Y s)
+- "mass m" or "mass of m kg" → mass = m (use numeric value if given, otherwise "m")
+- Include ALL numeric values with units in knowns
+- Unknowns should be the variable NAME only (e.g., "a" for acceleration, "v" for speed)
+- **SCENARIO CLASSIFICATION RULE**: If the problem gives distance and time with "initially at rest" (or v0=0), ALWAYS classify as "kinematics_1d" (constant acceleration from kinematic equations). Only classify as "inclined_plane" if angle and mass are given WITHOUT distance/time data.
+
+FEW-SHOT EXAMPLES:
+Example 1: "A car of mass m descending a slope. The car, initially at rest, covers a distance of 27 m in 3.0 s."
+→ suggested_scenario: "kinematics_1d" (distance + time + v0=0 given)
+
+Example 2: "A block of mass 5 kg on a 30° incline with μ_k = 0.2. Find the acceleration."
+→ suggested_scenario: "inclined_plane" (angle + mass given, NO distance/time)
+
 Output STRICT JSON ONLY. No markdown, no explanations, no conversational text. Do not wrap in code fences. Start with { and end with }.
 
 EXAMPLE OUTPUT:

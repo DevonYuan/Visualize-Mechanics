@@ -21,6 +21,10 @@ class Calculator:
         'acos': math.acos,
         'atan': math.atan,
         'atan2': math.atan2,
+        # Aliases
+        'arcsin': math.asin,
+        'arccos': math.acos,
+        'arctan': math.atan,
         'sinh': math.sinh,
         'cosh': math.cosh,
         'tanh': math.tanh,

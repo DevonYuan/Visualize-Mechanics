@@ -4,18 +4,37 @@ Scenario types: projectile_motion, kinematics_1d, inclined_plane, atwood_machine
 
 RULES:
 - USE SI UNITS ONLY (meters, seconds, kg, N, J, rad, rad/s, rad/s^2)
-- Time series at 30 FPS (t = 0, 0.033, 0.067, ..., duration)
+- Time series at 30 FPS (t = 0, 0.0333, 0.0667, ..., duration) - exactly 30 intervals per second
 - Include t=0 through end of motion
-- All numerical values as floats
+- All numerical values in parameters and time series MUST be floats (e.g., 6.0, not "6.0 m/s^2")
 - Equations in plain text (e.g., "v = v0 + a*t")
 - Camera position/target appropriate for scenario
 - **USE THE CALCULATOR TOOL FOR ALL NUMERICAL COMPUTATIONS** - do not compute manually
 - **REFER TO THE PHYSICS FORMULAS REFERENCE** for all applicable formulas
+- **ALL PARAMETER VALUES MUST BE NUMERIC FLOATS** - never output strings, expressions, or variable names like "m" or "arcsin(...)"
+- **final_answer values should include units as strings** (e.g., "6.0 m/s^2"), but parameters must be raw floats
+- **SCENARIO CLASSIFICATION**: Choose based on the PHYSICS METHOD NEEDED, not just the diagram:
+  * kinematics_1d: Given distance/time/velocity data, compute acceleration/velocity/displacement using kinematic equations
+  * inclined_plane: Need to compute forces/acceleration from angle, friction, mass (angle + mass given, NOT distance/time)
+  * projectile_motion: Object launched at angle with initial velocity
+  * atwood_machine: Two masses on pulley
+  * collision_1d: Two objects colliding
+  * rotational_kinematics: Rotating object with angular motion
+  * mass_spring: Mass on spring oscillating
 
 Output STRICT JSON ONLY. No markdown, no explanations, no conversational text. Do not wrap in code fences. Start with { and end with }.
 
 EXAMPLE OUTPUT:
 {"scenario": "projectile_motion", "parameters": {"v0": 20.0, "angle_deg": 45.0, "g": 9.8, "initial_height": 0.0}, "animation_spec": {"duration_s": 2.89, "fps": 30, "camera": {"position": [0, 5, 15], "target": [0, 2, 0]}}, "worked_solution": {"steps": [{"step": 1, "description": "Identify knowns: v0 = 20 m/s, angle = 45 deg, g = 9.8 m/s^2", "equation": null}, {"step": 2, "description": "Calculate time of flight", "equation": "t_flight = 2 * v0 * sin(angle) / g"}, {"step": 3, "description": "Calculate range", "equation": "range = v0 * cos(angle) * t_flight"}], "final_answer": {"range": "40.8 m", "max_height": "10.2 m"}}, "time_series": {"t": [0.0, 0.033, 0.067], "x": [0.0, 0.5, 0.9], "y": [0.0, 0.5, 0.9], "vx": [14.1, 14.1, 14.1], "vy": [14.1, 13.8, 13.4], "v": [20.0, 19.7, 19.3], "ax": [0.0, 0.0, 0.0], "ay": [-9.8, -9.8, -9.8], "a": [9.8, 9.8, 9.8]}}
+
+KINEMATICS_1D EXAMPLE (5 key frames):
+{"scenario": "kinematics_1d", "parameters": {"x0": 0.0, "v0": 0.0, "a": 6.0, "t_end": 3.0}, "animation_spec": {"duration_s": 3.0, "fps": 30, "camera": {"position": [0, 10, 0], "target": [0, 0, 0]}}, "worked_solution": {"steps": [{"step": 1, "description": "Identify knowns: d = 27.0 m, t = 3.0 s, v0 = 0.0 m/s", "equation": null}, {"step": 2, "description": "Calculate acceleration", "equation": "a = 2 * d / t^2"}, {"step": 3, "description": "Calculate final velocity", "equation": "v = v0 + a * t"}], "final_answer": {"acceleration": "6.0 m/s^2", "final_velocity": "18.0 m/s"}}, "time_series": {"t": [0.0, 0.0333, 0.0667, 1.5, 3.0], "x": [0.0, 0.0033, 0.0133, 6.75, 27.0], "v": [0.0, 0.2, 0.4, 9.0, 18.0], "a": [6.0, 6.0, 6.0, 6.0, 6.0]}}
+
+IMPORTANT: Time series ONLY provide 5 key frames (start, 2 early, middle, end). Backend will interpolate to 30 FPS.
+- t = [0.0, 0.0333, 0.0667, t_end/2, t_end]
+- x = [0.0, 0.5*a*0.0333^2, 0.5*a*0.0667^2, 0.5*a*(t_end/2)^2, 0.5*a*t_end^2]
+- v = [0.0, a*0.0333, a*0.0667, a*(t_end/2), a*t_end]
+- a = [a, a, a, a, a] (constant)
 
 JSON schema:
 {
@@ -48,7 +67,7 @@ CALCULATOR TOOL USAGE:
 You have access to a calculator tool. Use it for:
 - All arithmetic operations (addition, subtraction, multiplication, division)
 - Trigonometric functions (sin, cos, tan) - use RADIANS
-- Inverse trigonometric functions (asin, acos, atan)
+- Inverse trigonometric functions (asin, acos, atan) - aliases: arcsin, arccos, arctan
 - Square roots and powers (sqrt, pow)
 - Constants (pi, e, g)
 - Logarithms (log, ln)
@@ -65,6 +84,26 @@ Example calculator calls:
 - calculator({"expression": "sqrt(vx**2 + vy**2)", "variables": {"vx": 14.1, "vy": 13.8}})  // velocity magnitude
 - calculator({"expression": "g * sin(theta) - mu_k * g * cos(theta)", "variables": {}})  // incline accel with friction
 - calculator({"expression": "(m1 - m2) * g / (m1 + m2)", "variables": {}})  // Atwood acceleration
+- calculator({"expression": "2 * d / t**2", "variables": {}})  // kinematics: acceleration from distance and time
+- calculator({"expression": "0.5 * a * t**2", "variables": {"a": 6.0, "t": 0.0333}})  // x at t for kinematics_1d
+- calculator({"expression": "a * t", "variables": {"a": 6.0, "t": 0.0333}})  // v at t for kinematics_1d
+
+CRITICAL: When distance (d) and time (t) are given with initial velocity = 0, use a = 2*d/t^2 (kinematics_1d). DO NOT use inclined plane formulas unless angle and mass are given WITHOUT distance/time data.
+
+TIME SERIES GENERATION FOR KINEMATICS_1D (5 key frames only):
+YOU MUST USE CALCULATOR TOOL for each key frame value:
+1. Compute 5 key time points: [0.0, 0.0333, 0.0667, t_end/2, t_end]
+2. For EACH key t, call calculator:
+   - x: "0.5 * a * t**2"
+   - v: "a * t"
+   - a: just the value (constant)
+3. Output ONLY these 5 key frames, NOT full 30 FPS array
+Example for a=6.0, t_end=3.0:
+- t=0.0: x=0.0, v=0.0
+- t=0.0333: x=calculator("0.5 * 6.0 * 0.0333**2") = 0.00333, v=calculator("6.0 * 0.0333") = 0.2
+- t=0.0667: x=calculator("0.5 * 6.0 * 0.0667**2") = 0.01333, v=calculator("6.0 * 0.0667") = 0.4
+- t=1.5: x=calculator("0.5 * 6.0 * 1.5**2") = 6.75, v=calculator("6.0 * 1.5") = 9.0
+- t=3.0: x=calculator("0.5 * 6.0 * 3.0**2") = 27.0, v=calculator("6.0 * 3.0") = 18.0
 
 PHYSICS FORMULAS REFERENCE:
 A comprehensive formulas reference is available at formulas_reference.txt. Key formulas by scenario:
@@ -80,6 +119,7 @@ kinematics_1d:
 - v = v0 + a * t
 - x = x0 + v0 * t + 0.5 * a * t^2
 - v^2 = v0^2 + 2 * a * (x - x0)
+- a = 2 * d / t^2 (from rest, distance d in time t)
 
 inclined_plane:
 - a = g * sin(theta) (frictionless)
@@ -120,10 +160,18 @@ projectile_motion:
 - Camera: position [0, 5, 15], target [0, 2, 0]
 
 kinematics_1d:
-- Parameters: x0, v0, a, t_end (or compute from v_final=0)
-- Time series: t, x, v, a
-- Duration: until v=0 or given t_end
+- Parameters: x0, v0, a, t_end (all as numeric floats - e.g., 0.0, 0.0, 6.0, 3.0)
+- Time series: MUST include t, x, v, a arrays at 30 FPS - backend will expand from key points
+  * Provide key frames only: first 3 points, middle point, last point (5 points max per array)
+  * t = [0.0, 0.0333, 0.0667, t_end/2, t_end]
+  * x = [0.0, 0.5*a*0.0333^2, 0.5*a*0.0667^2, 0.5*a*(t_end/2)^2, 0.5*a*t_end^2]
+  * v = [0.0, a*0.0333, a*0.0667, a*(t_end/2), a*t_end]
+  * a = [a, a, a, a, a]
+- Duration: given t_end (the time from the problem)
 - Camera: position [0, 10, 0], target [0, 0, 0] (side view)
+- Worked solution steps MUST include: "Identify knowns: d = 27.0 m, t = 3.0 s, v0 = 0.0 m/s" (not "m = m")
+- Final answer MUST be: {"acceleration": "6.0 m/s^2"} (for acceleration problems)
+- NO DUPLICATE KEYS in JSON output
 
 inclined_plane:
 - Parameters: mass, angle_deg, mu_s, mu_k, g (9.8), initial_x, initial_v
