@@ -19,20 +19,44 @@ function checkBackendReady(port) {
   });
 }
 
+function getPythonCommand() {
+  // Try to find the correct python/uvicorn path
+  const platform = process.platform;
+  if (platform === 'win32') {
+    return '"' + path.join(__dirname, '..', 'backend', 'venv', 'Scripts', 'python.exe') + '"';
+  } else {
+    return path.join(__dirname, '..', 'backend', 'venv', 'bin', 'python');
+  }
+}
+
 async function startBackend() {
   console.log('Starting backend server...');
-  
-  // Start the FastAPI backend
-  backendProcess = spawn('uvicorn', ['app.main:app', '--port', '3000'], {
-    cwd: path.join(__dirname, '..', 'backend'),
-    shell: true
-  });
 
-  backendProcess.stdout.on('data', (data) => {
+  const pythonCmd = getPythonCommand();
+
+  // Start the FastAPI backend using the venv python -m uvicorn
+  // Use exec for Windows to handle spaces in path
+  const platform = process.platform;
+  let backendProcess;
+
+  if (platform === 'win32') {
+    const { exec } = require('child_process');
+    const backendDir = '"' + path.join(__dirname, '..', 'backend') + '"';
+    const command = `${pythonCmd} -m uvicorn app.main:app --port 3000`;
+    backendProcess = exec(command, { cwd: path.join(__dirname, '..', 'backend') });
+  } else {
+    const { spawn } = require('child_process');
+    backendProcess = spawn(pythonCmd, ['-m', 'uvicorn', 'app.main:app', '--port', '3000'], {
+      cwd: path.join(__dirname, '..', 'backend'),
+      shell: true
+    });
+  }
+
+  backendProcess.stdout?.on('data', (data) => {
     console.log(`Backend stdout: ${data}`);
   });
 
-  backendProcess.stderr.on('data', (data) => {
+  backendProcess.stderr?.on('data', (data) => {
     console.error(`Backend stderr: ${data}`);
   });
 
