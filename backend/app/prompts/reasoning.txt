@@ -50,13 +50,21 @@ You have access to a calculator tool. Use it for:
 - Trigonometric functions (sin, cos, tan) - use RADIANS
 - Inverse trigonometric functions (asin, acos, atan)
 - Square roots and powers (sqrt, pow)
-- Constants (pi, e)
+- Constants (pi, e, g)
 - Logarithms (log, ln)
 
+The calculator accepts an optional "variables" parameter - a dictionary of known values extracted from the problem.
+Known values (v0, angle, m, m1, m2, theta, mu_k, etc.) are AUTOMATICALLY PROVIDED as variables.
+You can use them directly in expressions: "2 * v0 * sin(theta) / g"
+You can also add your own computed values to variables: "expression": "v0x * t_flight", "variables": {"v0x": 14.1, "t_flight": 2.89}
+
 Example calculator calls:
-- calculator({"expression": "2 * 20 * sin(45 * pi / 180) / 9.8"})  // time of flight
-- calculator({"expression": "sqrt(14.1**2 + 13.8**2)"})  // velocity magnitude
-- calculator({"expression": "9.8 * sin(30 * pi / 180)"})  // acceleration on incline
+- calculator({"expression": "2 * v0 * sin(theta) / g", "variables": {}})  // time of flight (v0, theta, g auto-provided)
+- calculator({"expression": "v0 * cos(theta)", "variables": {}})  // v0x
+- calculator({"expression": "v0x * t_flight", "variables": {"v0x": 14.14, "t_flight": 2.89}})  // range with computed values
+- calculator({"expression": "sqrt(vx**2 + vy**2)", "variables": {"vx": 14.1, "vy": 13.8}})  // velocity magnitude
+- calculator({"expression": "g * sin(theta) - mu_k * g * cos(theta)", "variables": {}})  // incline accel with friction
+- calculator({"expression": "(m1 - m2) * g / (m1 + m2)", "variables": {}})  // Atwood acceleration
 
 PHYSICS FORMULAS REFERENCE:
 A comprehensive formulas reference is available at formulas_reference.txt. Key formulas by scenario:

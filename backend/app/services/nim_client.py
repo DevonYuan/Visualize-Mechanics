@@ -61,6 +61,21 @@ class NIMClient:
         data = extract_json(raw_content)
         return VisionOutput.model_validate(data)
 
+    def _extract_known_values(self, vision_output: VisionOutput) -> dict:
+        """Extract numeric values from knowns dict for calculator variables."""
+        knowns = {}
+        if vision_output.knowns:
+            for key, value in vision_output.knowns.items():
+                # Parse "20 m/s" -> 20.0
+                import re
+                match = re.match(r'^([\d.]+)', str(value).strip())
+                if match:
+                    try:
+                        knowns[key] = float(match.group(1))
+                    except ValueError:
+                        pass
+        return knowns
+
     @retry(
         wait=wait_exponential(multiplier=1, min=2, max=10),
         stop=stop_after_attempt(3),
@@ -77,6 +92,9 @@ Unknowns: {vision_output.unknowns}
 Diagram: {vision_output.diagram_description}
 Suggested Scenario: {vision_output.suggested_scenario}
 """
+
+        # Extract known numeric values for calculator variables
+        known_values = self._extract_known_values(vision_output)
 
         # Build system prompt with formulas reference
         system_prompt = f"{REASONING_PROMPT}\n\n--- FORMULAS REFERENCE ---\n{FORMULAS_REFERENCE}"
@@ -126,17 +144,20 @@ Suggested Scenario: {vision_output.suggested_scenario}
             })
 
             # Execute tool calls
+            import json
             for tool_call in message.tool_calls:
                 if tool_call.function.name == "calculator":
-                    import json
                     args = json.loads(tool_call.function.arguments)
                     expression = args.get("expression", "")
-                    result = Calculator.evaluate(expression)
+                    variables = args.get("variables", {})
+                    # Merge with known values from vision
+                    merged_vars = {**known_values, **variables}
+                    result = Calculator.evaluate(expression, merged_vars)
 
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
-                        "content": json.dumps({"result": result, "expression": expression}),
+                        "content": json.dumps({"result": result, "expression": expression, "variables": merged_vars}),
                     })
                 else:
                     messages.append({

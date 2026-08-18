@@ -2,20 +2,19 @@
 Calculator tool for the reasoning model to compute numerical values accurately.
 """
 import math
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class Calculator:
     """Safe calculator for physics computations."""
 
     # Safe namespace with only math functions and constants
-    SAFE_NAMESPACE = {
+    BASE_NAMESPACE = {
         # Constants
         'pi': math.pi,
         'e': math.e,
         'g': 9.8,
 
-        # Basic arithmetic operators are handled by eval
         # Trigonometric functions (radians)
         'sin': math.sin,
         'cos': math.cos,
@@ -58,12 +57,13 @@ class Calculator:
     }
 
     @classmethod
-    def evaluate(cls, expression: str) -> float:
+    def evaluate(cls, expression: str, variables: Optional[Dict[str, float]] = None) -> float:
         """
-        Safely evaluate a mathematical expression.
+        Safely evaluate a mathematical expression with optional variables.
 
         Args:
             expression: Mathematical expression string
+            variables: Optional dict of variable names to values (e.g., {"m": 2.0, "v0": 20.0})
 
         Returns:
             Computed float value
@@ -91,28 +91,34 @@ class Calculator:
         # Replace ^ with ** for power
         expression = expression.replace('^', '**')
 
+        # Build namespace with base + variables
+        namespace = dict(cls.BASE_NAMESPACE)
+        if variables:
+            namespace.update(variables)
+
         try:
-            result = eval(expression, {"__builtins__": {}}, cls.SAFE_NAMESPACE)
+            result = eval(expression, {"__builtins__": {}}, namespace)
             return float(result)
         except Exception as e:
             raise ValueError(f"Calculator error: {str(e)}")
 
 
-def calculator_tool(expression: str) -> Dict[str, Any]:
+def calculator_tool(expression: str, variables: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
     """
     Calculator tool function for use with function calling.
 
     Args:
         expression: Mathematical expression to evaluate
+        variables: Optional dict of variable names to values (e.g., {"m": 2.0, "v0": 20.0})
 
     Returns:
         Dict with result or error
     """
     try:
-        result = Calculator.evaluate(expression)
-        return {"result": result, "expression": expression}
+        result = Calculator.evaluate(expression, variables)
+        return {"result": result, "expression": expression, "variables": variables}
     except Exception as e:
-        return {"error": str(e), "expression": expression}
+        return {"error": str(e), "expression": expression, "variables": variables}
 
 
 # Tool definition for OpenAI function calling
@@ -120,13 +126,19 @@ CALCULATOR_TOOL_DEFINITION = {
     "type": "function",
     "function": {
         "name": "calculator",
-        "description": "Evaluate a mathematical expression. Use for all numerical computations. Supports: basic arithmetic (+, -, *, /, **), trig functions (sin, cos, tan, asin, acos, atan) in RADIANS, sqrt, pow, log, log10, pi, e, degrees(), radians(), round(), abs(), min(), max().",
+        "description": "Evaluate a mathematical expression. Use for all numerical computations. Supports: basic arithmetic (+, -, *, /, **), trig functions (sin, cos, tan, asin, acos, atan) in RADIANS, sqrt, pow, log, log10, pi, e, g, degrees(), radians(), round(), abs(), min(), max(). You can pass known values as variables.",
         "parameters": {
             "type": "object",
             "properties": {
                 "expression": {
                     "type": "string",
-                    "description": "Mathematical expression to evaluate. Use RADIANS for trig functions. Example: '2 * 20 * sin(45 * pi / 180) / 9.8'"
+                    "description": "Mathematical expression to evaluate. Use RADIANS for trig functions. Example: '2 * v0 * sin(theta) / g' with variables {'v0': 20, 'theta': 0.785}"
+                },
+                "variables": {
+                    "type": "object",
+                    "description": "Known variable values to substitute. Map variable names to numeric values.",
+                    "additionalProperties": {"type": "number"},
+                    "default": {}
                 }
             },
             "required": ["expression"],
