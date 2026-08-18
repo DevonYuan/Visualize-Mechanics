@@ -1,20 +1,18 @@
 """
-Calculator tool for the reasoning model to compute numerical values accurately.
+Calculator tool using simpleeval for safe expression evaluation.
 """
 import math
-from typing import Dict, Any, Optional
+import re
+from typing import Dict, Any, Optional, Union
+
+from simpleeval import simple_eval, EvalWithCompoundTypes
 
 
 class Calculator:
-    """Safe calculator for physics computations."""
+    """Safe calculator for physics computations using simpleeval."""
 
-    # Safe namespace with only math functions and constants
-    BASE_NAMESPACE = {
-        # Constants
-        'pi': math.pi,
-        'e': math.e,
-        'g': 9.8,
-
+    # Allowed functions for simpleeval
+    ALLOWED_FUNCTIONS = {
         # Trigonometric functions (radians)
         'sin': math.sin,
         'cos': math.cos,
@@ -50,20 +48,62 @@ class Calculator:
         # Min/Max
         'min': min,
         'max': max,
+    }
 
-        # Constants
+    # Constants
+    CONSTANTS = {
+        'pi': math.pi,
+        'e': math.e,
+        'g': 9.8,
         'inf': float('inf'),
         'nan': float('nan'),
     }
 
     @classmethod
-    def evaluate(cls, expression: str, variables: Optional[Dict[str, float]] = None) -> float:
+    def _coerce_to_float(cls, value: Union[str, int, float]) -> float:
+        """Convert a value to float, handling strings with units or simple expressions."""
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            # Try direct float conversion first
+            try:
+                return float(value)
+            except ValueError:
+                pass
+            # Extract leading number from strings like "20 m/s", "5 kg", "9.8"
+            match = re.match(r'^([\d.]+)', value.strip())
+            if match:
+                return float(match.group(1))
+            # If it's an expression like "arcsin(27 / (0.5 * 3**2))", evaluate it
+            try:
+                return cls.evaluate(value)
+            except Exception:
+                pass
+        raise ValueError(f"Cannot convert to float: {value}")
+
+    @classmethod
+    def _sanitize_variables(cls, variables: Optional[Dict[str, Any]]) -> Dict[str, float]:
+        """Convert variable values to floats, handling strings and expressions."""
+        if not variables:
+            return {}
+        sanitized = {}
+        for key, value in variables.items():
+            try:
+                sanitized[key] = cls._coerce_to_float(value)
+            except Exception:
+                # Skip invalid variables
+                pass
+        return sanitized
+
+    @classmethod
+    def evaluate(cls, expression: str, variables: Optional[Dict[str, Any]] = None) -> float:
         """
         Safely evaluate a mathematical expression with optional variables.
 
         Args:
             expression: Mathematical expression string
             variables: Optional dict of variable names to values (e.g., {"m": 2.0, "v0": 20.0})
+                       Values can be numbers, strings like "20 m/s", or simple expressions.
 
         Returns:
             Computed float value
@@ -71,45 +111,34 @@ class Calculator:
         Raises:
             ValueError: If expression is invalid or contains unsafe operations
         """
-        # Validate expression - only allow safe characters
-        allowed_chars = set('0123456789+-*/.()^% ')
-        allowed_chars.update('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_')
-
-        # Check for potentially dangerous patterns (as whole words/identifiers)
-        import re
-        dangerous_patterns = [
-            r'\b__\b', r'\bimport\b', r'\bexec\b', r'\beval\b', r'\bcompile\b',
-            r'\bopen\b', r'\bread\b', r'\bwrite\b', r'\bsubprocess\b', r'\bos\b',
-            r'\bsys\b', r'\bbuiltins\b', r'\bglobals\b', r'\blocals\b', r'\bvars\b',
-            r'\bgetattr\b', r'\bsetattr\b', r'\bdelattr\b', r'\bclassmethod\b', r'\bstaticmethod\b'
-        ]
-
-        for pattern in dangerous_patterns:
-            if re.search(pattern, expression):
-                raise ValueError(f"Expression contains disallowed pattern: {pattern}")
-
         # Replace ^ with ** for power
         expression = expression.replace('^', '**')
 
-        # Build namespace with base + variables
-        namespace = dict(cls.BASE_NAMESPACE)
+        # Build names dict with constants + sanitized variables
+        names = dict(cls.CONSTANTS)
         if variables:
-            namespace.update(variables)
+            sanitized_vars = cls._sanitize_variables(variables)
+            names.update(sanitized_vars)
 
         try:
-            result = eval(expression, {"__builtins__": {}}, namespace)
+            result = simple_eval(
+                expression,
+                functions=cls.ALLOWED_FUNCTIONS,
+                names=names
+            )
             return float(result)
         except Exception as e:
             raise ValueError(f"Calculator error: {str(e)}")
 
 
-def calculator_tool(expression: str, variables: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
+def calculator_tool(expression: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Calculator tool function for use with function calling.
 
     Args:
         expression: Mathematical expression to evaluate
-        variables: Optional dict of variable names to values (e.g., {"m": 2.0, "v0": 20.0})
+        variables: Optional dict of variable names to values (e.g., {"m": 2.0, "v0": "20 m/s"})
+                   Values can be numbers, strings with units, or simple expressions.
 
     Returns:
         Dict with result or error
@@ -126,7 +155,7 @@ CALCULATOR_TOOL_DEFINITION = {
     "type": "function",
     "function": {
         "name": "calculator",
-        "description": "Evaluate a mathematical expression. Use for all numerical computations. Supports: basic arithmetic (+, -, *, /, **), trig functions (sin, cos, tan, asin, acos, atan) in RADIANS, sqrt, pow, log, log10, pi, e, g, degrees(), radians(), round(), abs(), min(), max(). You can pass known values as variables.",
+        "description": "Evaluate a mathematical expression. Use for all numerical computations. Supports: basic arithmetic (+, -, *, /, **), trig functions (sin, cos, tan, asin, acos, atan) in RADIANS, sqrt, pow, log, log10, pi, e, g, degrees(), radians(), round(), abs(), min(), max(). You can pass known values as variables. Variable values can be numbers or strings like \"20 m/s\" - units will be stripped automatically.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -136,8 +165,8 @@ CALCULATOR_TOOL_DEFINITION = {
                 },
                 "variables": {
                     "type": "object",
-                    "description": "Known variable values to substitute. Map variable names to numeric values.",
-                    "additionalProperties": {"type": "number"},
+                    "description": "Known variable values to substitute. Map variable names to numeric values or strings like \"20 m/s\". Units will be stripped automatically.",
+                    "additionalProperties": True,
                     "default": {}
                 }
             },
