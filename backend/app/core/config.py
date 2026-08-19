@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # NIM
     NIM_API_KEY: str = "test-key"
     NIM_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    NIM_VISION_MODEL: str = "meta/llama-3.2-11b-vision-instruct"
+    NIM_VISION_MODEL: str = "meta/llama-3.2-90b-vision-instruct"
     NIM_REASONING_MODEL: str = "meta/llama-3.1-8b-instruct"
 
     # Server

@@ -41,7 +41,7 @@ class NIMClient:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Extract the physics problem from this image. Output ONLY valid JSON matching the schema. No text before or after. No markdown code fences. Start with { and end with }."},
+                        {"type": "text", "text": "Extract the physics problem from this image. Your entire response must be valid JSON and nothing else. No explanations, no conversational text, no 'Answer:' prefix, no markdown code fences. Start immediately with { and end with }. If you see an angle in the diagram, include it in the knowns."},
                         {
                             "type": "image_url",
                             "image_url": {
@@ -171,6 +171,11 @@ class NIMClient:
                 d = known_values.get("d") or known_values.get("distance") or params.get("d") or params.get("distance")
                 t = known_values.get("t") or known_values.get("time") or params.get("t") or params.get("time")
                 v0 = known_values.get("v0") or known_values.get("initial_v") or params.get("v0") or params.get("initial_v", 0)
+                
+                # Preserve angle parameter if present (for 3D rendering)
+                angle = known_values.get("angle") or known_values.get("theta") or params.get("angle_deg")
+                if angle:
+                    params["angle_deg"] = angle
 
                 if d and t:
                     # a = 2*d / t^2 (from rest)

@@ -16,6 +16,7 @@ RULES:
 - **SCENARIO CLASSIFICATION - CRITICAL RULE**: Choose based on the PHYSICS METHOD NEEDED, not just the diagram:
   * kinematics_1d: **HIGHEST PRIORITY** - If problem gives distance (d) and time (t) with "initially at rest" (or v0=0), ALWAYS use kinematics_1d. Compute a = 2*d/t^2. Do NOT use inclined plane formulas even if diagram shows a slope.
   * inclined_plane: Only if angle and mass are given WITHOUT distance/time data. Compute forces/acceleration from angle, friction, mass.
+- **IMPORTANT FOR 3D RENDERING**: If the problem is classified as kinematics_1d but the diagram shows an incline with an angle, ALWAYS include `angle_deg` in the parameters (e.g., `angle_deg: 10.0`). The frontend needs this for proper 3D visualization even though the physics calculation uses kinematic equations.
   * projectile_motion: Object launched at angle with initial velocity
   * atwood_machine: Two masses on pulley
   * collision_1d: Two objects colliding
@@ -23,13 +24,13 @@ RULES:
   * mass_spring: Mass on spring oscillating
 - **DO NOT GENERATE 3D SCENES OR CAMERA POSITIONS** - The frontend has pre-built scenes for each scenario. You only classify the scenario and compute the physics values (time_series, parameters).
 
-Output STRICT JSON ONLY. No markdown, no explanations, no conversational text. Do not wrap in code fences. Start with { and end with }.
+Output STRICT JSON ONLY. No markdown, no explanations, no conversational text, no introductory text, no "The solution is", no bullet points. Do not wrap in code fences. Start immediately with { and end with }. Your entire response must be valid JSON and nothing else.
 
 EXAMPLE OUTPUT:
 {"scenario": "projectile_motion", "parameters": {"v0": 20.0, "angle_deg": 45.0, "g": 9.8, "initial_height": 0.0}, "animation_spec": {"duration_s": 2.89, "fps": 30}, "worked_solution": {"steps": [{"step": 1, "description": "Identify knowns: v0 = 20 m/s, angle = 45 deg, g = 9.8 m/s^2", "equation": null}, {"step": 2, "description": "Calculate time of flight", "equation": "t_flight = 2 * v0 * sin(angle) / g"}, {"step": 3, "description": "Calculate range", "equation": "range = v0 * cos(angle) * t_flight"}], "final_answer": {"range": "40.8 m", "max_height": "10.2 m"}}, "time_series": {"t": [0.0, 0.033, 0.067], "x": [0.0, 0.5, 0.9], "y": [0.0, 0.5, 0.9], "vx": [14.1, 14.1, 14.1], "vy": [14.1, 13.8, 13.4], "v": [20.0, 19.7, 19.3], "ax": [0.0, 0.0, 0.0], "ay": [-9.8, -9.8, -9.8], "a": [9.8, 9.8, 9.8]}}
 
 KINEMATICS_1D EXAMPLE (5 key frames):
-{"scenario": "kinematics_1d", "parameters": {"x0": 0.0, "v0": 0.0, "a": 6.0, "t_end": 3.0}, "animation_spec": {"duration_s": 3.0, "fps": 30}, "worked_solution": {"steps": [{"step": 1, "description": "Identify knowns: d = 27.0 m, t = 3.0 s, v0 = 0.0 m/s", "equation": null}, {"step": 2, "description": "Calculate acceleration", "equation": "a = 2 * d / t^2"}, {"step": 3, "description": "Calculate final velocity", "equation": "v = v0 + a * t"}], "final_answer": {"acceleration": "6.0 m/s^2", "final_velocity": "18.0 m/s"}}, "time_series": {"t": [0.0, 0.0333, 0.0667, 1.5, 3.0], "x": [0.0, 0.0033, 0.0133, 6.75, 27.0], "v": [0.0, 0.2, 0.4, 9.0, 18.0], "a": [6.0, 6.0, 6.0, 6.0, 6.0]}}
+{"scenario": "kinematics_1d", "parameters": {"x0": 0.0, "v0": 0.0, "a": 6.0, "t_end": 3.0, "angle_deg": 10.0}, "animation_spec": {"duration_s": 3.0, "fps": 30}, "worked_solution": {"steps": [{"step": 1, "description": "Identify knowns: d = 27.0 m, t = 3.0 s, v0 = 0.0 m/s", "equation": null}, {"step": 2, "description": "Calculate acceleration", "equation": "a = 2 * d / t^2"}, {"step": 3, "description": "Calculate final velocity", "equation": "v = v0 + a * t"}], "final_answer": {"acceleration": "6.0 m/s^2", "final_velocity": "18.0 m/s"}}, "time_series": {"t": [0.0, 0.0333, 0.0667, 1.5, 3.0], "x": [0.0, 0.0033, 0.0133, 6.75, 27.0], "v": [0.0, 0.2, 0.4, 9.0, 18.0], "a": [6.0, 6.0, 6.0, 6.0, 6.0]}}
 
 IMPORTANT: Time series ONLY provide 5 key frames (start, 2 early, middle, end). Backend will interpolate to 30 FPS.
 - t = [0.0, 0.0333, 0.0667, t_end/2, t_end]
@@ -161,6 +162,7 @@ projectile_motion:
 
 kinematics_1d:
 - Parameters: x0, v0, a, t_end (all as numeric floats - e.g., 0.0, 0.0, 6.0, 3.0)
+- **CRITICAL**: If the vision output includes an angle (from diagram showing incline), include `angle_deg` in parameters for 3D rendering (e.g., `angle_deg: 10.0`)
 - Time series: MUST include t, x, v, a arrays at 30 FPS - backend will expand from key points
   * Provide key frames only: first 3 points, middle point, last point (5 points max per array)
   * t = [0.0, 0.0333, 0.0667, t_end/2, t_end]

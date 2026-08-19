@@ -14,13 +14,14 @@ function KinematicsContent({ timeSeries, currentFrame, bounds, inclineAngle = 0 
     if (!timeSeries?.x) return new THREE.Vector3(0, 0.5, 0);
     const idx = Math.min(currentFrame, timeSeries.x.length - 1);
     const x = timeSeries.x[idx] || 0;
-    // Position along inclined track: x*cos(θ) horizontally, x*sin(θ) vertically
+    // Position along inclined track (in local coordinates of rotated group)
+    // The group is already rotated, so we just place the block at x position along the track
     return new THREE.Vector3(
-      x * Math.cos(angleRad),
-      0.5 + x * Math.sin(angleRad),
+      x,
+      0.5,
       0
     );
-  }, [timeSeries, currentFrame, angleRad]);
+  }, [timeSeries, currentFrame]);
 
   // Current velocity (for color and optional vector)
   const currentVelocity = useMemo(() => {
@@ -214,7 +215,7 @@ export default function Kinematics1DScene({ timeSeries, currentTime, duration, p
   const frameIndex = currentFrame >= 0 ? currentFrame : (timeSeries?.t?.length ?? 1) - 1;
 
   // Get incline angle from parameters (in degrees)
-  const inclineAngle = parameters.angle || parameters.incline_angle || parameters.theta || 0;
+  const inclineAngle = parameters.angle_deg || parameters.angle || parameters.incline_angle || parameters.theta || 0;
 
   // Calculate scene bounds
   const bounds = useMemo(() => {
@@ -239,12 +240,13 @@ export default function Kinematics1DScene({ timeSeries, currentTime, duration, p
   // Camera position: side view to see the incline slope
   const cameraPosition = useMemo(() => {
     if (inclineAngle !== 0) {
-      const angleRad = inclineAngle * Math.PI / 180;
+      const angleRad = -inclineAngle * Math.PI / 180;
       const trackCenterX = (bounds.minX + bounds.maxX) / 2;
       const distance = Math.max(trackLength, 18);
+      // Position camera to see the inclined track
       return [
-        trackCenterX * Math.cos(angleRad),
-        7 + Math.abs(trackCenterX * Math.sin(angleRad)),
+        trackCenterX * Math.cos(angleRad) - distance * Math.sin(angleRad),
+        trackCenterX * Math.sin(angleRad) + distance * Math.cos(angleRad) + 5,
         distance
       ];
     }
@@ -254,8 +256,9 @@ export default function Kinematics1DScene({ timeSeries, currentTime, duration, p
   // Camera target: look at track center on the incline
   const cameraTarget = useMemo(() => {
     if (inclineAngle !== 0) {
-      const angleRad = inclineAngle * Math.PI / 180;
+      const angleRad = -inclineAngle * Math.PI / 180;
       const trackCenterX = (bounds.minX + bounds.maxX) / 2;
+      // Target the center of the inclined track
       return [
         trackCenterX * Math.cos(angleRad),
         trackCenterX * Math.sin(angleRad) + 0.5,
