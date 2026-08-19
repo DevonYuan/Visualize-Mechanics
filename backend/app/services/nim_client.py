@@ -88,6 +88,8 @@ class NIMClient:
                 # Verify acceleration: a = g * sin(theta) or a = g * (sin(theta) - mu_k * cos(theta))
                 theta = known_values.get("angle") or known_values.get("theta") or params.get("angle_deg")
                 mu_k = known_values.get("mu_k") or params.get("mu_k", 0)
+                mass = known_values.get("mass") or params.get("mass")
+                g = params.get("g", 9.8)
 
                 if theta:
                     # Convert to radians if needed (known_values are already numeric)
@@ -106,6 +108,25 @@ class NIMClient:
                             params["a"] = a_correct
                     # Add corrected acceleration
                     params["a_verified"] = a_correct
+
+                    # Verify normal force: N = m * g * cos(theta)
+                    if mass:
+                        f_normal_correct = Calculator.evaluate("mass * g * cos(theta)",
+                                                             {"mass": mass, "g": g, "theta": theta_rad})
+                        params["f_normal_verified"] = f_normal_correct
+                        
+                        # Verify friction force: f = mu_k * N
+                        if mu_k:
+                            f_friction_correct = Calculator.evaluate("mu_k * f_normal",
+                                                                   {"mu_k": mu_k, "f_normal": f_normal_correct})
+                            params["f_friction_verified"] = f_friction_correct
+
+                    # Verify distance if time is given: x = 0.5 * a * t^2 (from rest)
+                    t = known_values.get("time") or known_values.get("t") or params.get("t_end")
+                    v0 = known_values.get("initial_v") or known_values.get("v0") or params.get("initial_v", params.get("v0", 0))
+                    if t and v0 == 0:
+                        x_correct = Calculator.evaluate("0.5 * a * t**2", {"a": a_correct, "t": t})
+                        params["distance_verified"] = x_correct
 
             elif scenario == "projectile_motion":
                 # Verify time of flight, range, max height
@@ -139,6 +160,11 @@ class NIMClient:
                     a_correct = Calculator.evaluate("(m1 - m2) * g / (m1 + m2)",
                                                   {"m1": m1, "m2": m2})
                     params["a_verified"] = a_correct
+                    
+                    # Verify tension
+                    tension_correct = Calculator.evaluate("2 * m1 * m2 * g / (m1 + m2)",
+                                                        {"m1": m1, "m2": m2})
+                    params["tension_verified"] = tension_correct
 
             elif scenario == "kinematics_1d":
                 # Handle case where distance and time are given (find acceleration)
@@ -165,6 +191,50 @@ class NIMClient:
                     params["t_stop_verified"] = t_stop
                     params["distance_verified"] = dist
 
+            elif scenario == "rotational_kinematics":
+                # Verify angular acceleration if torque and moment of inertia given
+                tau = known_values.get("torque") or params.get("torque")
+                I = known_values.get("I") or params.get("I")
+                if tau and I:
+                    alpha_correct = Calculator.evaluate("tau / I", {"tau": tau, "I": I})
+                    params["alpha_verified"] = alpha_correct
+
+            elif scenario == "mass_spring":
+                # Verify angular frequency and period
+                mass = known_values.get("mass") or params.get("mass")
+                k = known_values.get("k") or params.get("k")
+                if mass and k:
+                    omega_correct = Calculator.evaluate("sqrt(k / mass)", {"k": k, "mass": mass})
+                    params["omega_verified"] = omega_correct
+                    period_correct = Calculator.evaluate("2 * pi / omega", {"omega": omega_correct})
+                    params["period_verified"] = period_correct
+
+            elif scenario == "collision_1d":
+                # Verify final velocities using conservation of momentum and restitution
+                m1 = known_values.get("m1") or params.get("m1")
+                m2 = known_values.get("m2") or params.get("m2")
+                v1_i = known_values.get("v1_initial") or params.get("v1_initial")
+                v2_i = known_values.get("v2_initial") or params.get("v2_initial")
+                e = known_values.get("restitution") or params.get("restitution", 1.0)
+
+                if m1 and m2 and v1_i is not None and v2_i is not None:
+                    # Elastic collision formulas
+                    v1_f = Calculator.evaluate("(m1 - m2) * v1_i / (m1 + m2) + 2 * m2 * v2_i / (m1 + m2)",
+                                             {"m1": m1, "m2": m2, "v1_i": v1_i, "v2_i": v2_i})
+                    v2_f = Calculator.evaluate("2 * m1 * v1_i / (m1 + m2) + (m2 - m1) * v2_i / (m1 + m2)",
+                                             {"m1": m1, "m2": m2, "v1_i": v1_i, "v2_i": v2_i})
+                    params["v1_final_verified"] = v1_f
+                    params["v2_final_verified"] = v2_f
+                    
+                    # For inelastic collisions, adjust by restitution
+                    if e != 1.0:
+                        v1_f = Calculator.evaluate("((m1 - e * m2) * v1_i + (1 + e) * m2 * v2_i) / (m1 + m2)",
+                                                   {"m1": m1, "m2": m2, "v1_i": v1_i, "v2_i": v2_i, "e": e})
+                        v2_f = Calculator.evaluate("((1 + e) * m1 * v1_i + (m2 - e * m1) * v2_i) / (m1 + m2)",
+                                                   {"m1": m1, "m2": m2, "v1_i": v1_i, "v2_i": v2_i, "e": e})
+                        params["v1_final_verified"] = v1_f
+                        params["v2_final_verified"] = v2_f
+
         except Exception:
             # If verification fails, return original
             pass
@@ -174,13 +244,13 @@ class NIMClient:
         return reasoning_output
 
     def _expand_time_series(self, reasoning_output: ReasoningOutput) -> ReasoningOutput:
-        """Expand 5 key-frame time series to full 30 FPS."""
+        """Expand 5 key-frame time series to full 30 FPS for all scenarios."""
         ts = reasoning_output.time_series
         if ts is None or not ts.t:
             return reasoning_output
 
-        # Check if we have only 5 key frames (kinematics_1d pattern)
-        if len(ts.t) == 5 and reasoning_output.scenario == "kinematics_1d":
+        # Check if we have only 5 key frames (common pattern for all scenarios)
+        if len(ts.t) == 5:
             # Full 30 FPS expansion
             fps = reasoning_output.animation_spec.fps if reasoning_output.animation_spec else 30
             duration = reasoning_output.animation_spec.duration_s if reasoning_output.animation_spec else ts.t[-1]
@@ -189,21 +259,267 @@ class NIMClient:
             # Generate full time array
             t_full = np.linspace(0, duration, n_points).tolist()
 
-            # Get acceleration from parameters
-            a = reasoning_output.parameters.get("a", 0.0)
-            v0 = reasoning_output.parameters.get("v0", 0.0)
-            x0 = reasoning_output.parameters.get("x0", 0.0)
+            scenario = reasoning_output.scenario
+            params = reasoning_output.parameters
 
-            # Compute full arrays using kinematic equations
-            x_full = [x0 + v0 * t + 0.5 * a * t * t for t in t_full]
-            v_full = [v0 + a * t for t in t_full]
-            a_full = [a] * n_points
+            if scenario == "kinematics_1d":
+                # Constant acceleration: x = x0 + v0*t + 0.5*a*t^2, v = v0 + a*t
+                a = params.get("a", 0.0)
+                v0 = params.get("v0", 0.0)
+                x0 = params.get("x0", 0.0)
+                x_full = [x0 + v0 * t + 0.5 * a * t * t for t in t_full]
+                v_full = [v0 + a * t for t in t_full]
+                a_full = [a] * n_points
+                ts.t = t_full
+                ts.x = x_full
+                ts.v = v_full
+                ts.a = a_full
 
-            # Update time series
-            ts.t = t_full
-            ts.x = x_full
-            ts.v = v_full
-            ts.a = a_full
+            elif scenario == "inclined_plane":
+                # Constant acceleration along incline: x = x0 + v0*t + 0.5*a*t^2
+                # Use verified values if available, fall back to params
+                a = params.get("a_verified", params.get("a", 0.0))
+                v0 = params.get("initial_v", params.get("v0", 0.0))
+                x0 = params.get("initial_x", params.get("x0", 0.0))
+                x_full = [x0 + v0 * t + 0.5 * a * t * t for t in t_full]
+                v_full = [v0 + a * t for t in t_full]
+                a_full = [a] * n_points
+                
+                # Normal force and friction - use verified if available
+                f_normal = params.get("f_normal_verified")
+                f_friction = params.get("f_friction_verified")
+                
+                if f_normal is None or f_friction is None:
+                    # Compute from params if not verified
+                    mass = params.get("mass", 1.0)
+                    angle_deg = params.get("angle_deg", 30.0)
+                    mu_k = params.get("mu_k", 0.0)
+                    g = params.get("g", 9.8)
+                    import math
+                    angle_rad = angle_deg * math.pi / 180
+                    f_normal = f_normal if f_normal is not None else mass * g * math.cos(angle_rad)
+                    f_friction = f_friction if f_friction is not None else mu_k * f_normal
+                
+                ts.t = t_full
+                ts.x = x_full
+                ts.v = v_full
+                ts.a = a_full
+                ts.f_normal = [f_normal] * n_points
+                ts.f_friction = [f_friction] * n_points
+
+            elif scenario == "projectile_motion":
+                # Projectile: x = v0x * t, y = y0 + v0y * t - 0.5*g*t^2
+                v0 = params.get("v0", 0.0)
+                angle_deg = params.get("angle_deg", 45.0)
+                g = params.get("g", 9.8)
+                initial_height = params.get("initial_height", 0.0)
+                import math
+                angle_rad = angle_deg * math.pi / 180
+                v0x = v0 * math.cos(angle_rad)
+                v0y = v0 * math.sin(angle_rad)
+                
+                x_full = [v0x * t for t in t_full]
+                y_full = [initial_height + v0y * t - 0.5 * g * t * t for t in t_full]
+                vx_full = [v0x] * n_points
+                vy_full = [v0y - g * t for t in t_full]
+                v_full = [math.sqrt(v0x**2 + (v0y - g * t)**2) for t in t_full]
+                ax_full = [0.0] * n_points
+                ay_full = [-g] * n_points
+                a_full = [g] * n_points
+                
+                ts.t = t_full
+                ts.x = x_full
+                ts.y = y_full
+                ts.vx = vx_full
+                ts.vy = vy_full
+                ts.v = v_full
+                ts.ax = ax_full
+                ts.ay = ay_full
+                ts.a = a_full
+
+            elif scenario == "atwood_machine":
+                # Constant acceleration: y1 = y1_0 + v0*t + 0.5*a*t^2 (downward positive for m1)
+                a = params.get("a", 0.0)
+                v0 = params.get("initial_v", params.get("v0", 0.0))
+                # Initial positions: m1 starts at some height, m2 at another
+                # For simplicity, assume y1=0 at top, y2=string_length at top
+                # Actually, we need to track both masses
+                # y1 increases (down), y2 decreases (up)
+                y1_0 = params.get("initial_y1", 0.0)
+                y2_0 = params.get("initial_y2", 2.0)  # string length
+                
+                y1_full = [y1_0 + v0 * t + 0.5 * a * t * t for t in t_full]
+                y2_full = [y2_0 - v0 * t - 0.5 * a * t * t for t in t_full]  # opposite direction
+                v_full = [v0 + a * t for t in t_full]
+                a_full = [a] * n_points
+                
+                # Tension is constant
+                m1 = params.get("m1", 1.0)
+                m2 = params.get("m2", 1.0)
+                g = params.get("g", 9.8)
+                tension = 2 * m1 * m2 * g / (m1 + m2) if (m1 + m2) > 0 else 0
+                
+                ts.t = t_full
+                ts.y1 = y1_full
+                ts.y2 = y2_full
+                ts.v = v_full
+                ts.a = a_full
+                ts.tension = [tension] * n_points
+
+            elif scenario == "rotational_kinematics":
+                # Constant angular acceleration: theta = theta0 + omega0*t + 0.5*alpha*t^2
+                alpha = params.get("alpha", 0.0)
+                omega0 = params.get("omega0", params.get("initial_omega", 0.0))
+                theta0 = params.get("theta0", params.get("initial_theta", 0.0))
+                theta_full = [theta0 + omega0 * t + 0.5 * alpha * t * t for t in t_full]
+                omega_full = [omega0 + alpha * t for t in t_full]
+                alpha_full = [alpha] * n_points
+                
+                ts.t = t_full
+                ts.theta = theta_full
+                ts.omega = omega_full
+                ts.alpha = alpha_full
+
+            elif scenario == "mass_spring":
+                # Simple harmonic motion: x = A*cos(omega*t + phi), v = -A*omega*sin(omega*t + phi)
+                # We need amplitude and phase from initial conditions
+                mass = params.get("mass", 1.0)
+                k = params.get("k", 1.0)
+                x0 = params.get("x0", params.get("initial_x", 0.1))
+                v0 = params.get("v0", params.get("initial_v", 0.0))
+                damping = params.get("damping", 0.0)
+                g = params.get("g", 9.8)
+                
+                import math
+                omega = math.sqrt(k / mass)
+                
+                if damping == 0:
+                    # Undamped: x = A*cos(omega*t + phi)
+                    # At t=0: x0 = A*cos(phi), v0 = -A*omega*sin(phi)
+                    A = math.sqrt(x0**2 + (v0/omega)**2) if omega > 0 else abs(x0)
+                    phi = math.atan2(-v0/omega, x0) if omega > 0 and A > 0 else 0
+                    
+                    x_eq_full = [A * math.cos(omega * t + phi) for t in t_full]
+                    v_full = [-A * omega * math.sin(omega * t + phi) for t in t_full]
+                    a_full = [-A * omega**2 * math.cos(omega * t + phi) for t in t_full]
+                    force_full = [-k * x_eq for x_eq in x_eq_full]
+                    ke_full = [0.5 * mass * v**2 for v in v_full]
+                    pe_full = [0.5 * k * x_eq**2 for x_eq in x_eq_full]
+                    e_total_full = [ke_full[i] + pe_full[i] for i in range(n_points)]
+                else:
+                    # Damped - simplified, just use key frames as-is (complex)
+                    # For now, interpolate from key frames
+                    from scipy import interpolate
+                    if len(ts.x_eq) >= 2:
+                        f_x = interpolate.interp1d(ts.t, ts.x_eq, kind='linear', fill_value='extrapolate')
+                        f_v = interpolate.interp1d(ts.t, ts.v, kind='linear', fill_value='extrapolate')
+                        f_a = interpolate.interp1d(ts.t, ts.a, kind='linear', fill_value='extrapolate')
+                        x_eq_full = f_x(t_full).tolist()
+                        v_full = f_v(t_full).tolist()
+                        a_full = f_a(t_full).tolist()
+                        force_full = [-k * x for x in x_eq_full]
+                        ke_full = [0.5 * mass * v**2 for v in v_full]
+                        pe_full = [0.5 * k * x**2 for x in x_eq_full]
+                        e_total_full = [ke_full[i] + pe_full[i] for i in range(n_points)]
+                    else:
+                        x_eq_full = [x0] * n_points
+                        v_full = [v0] * n_points
+                        a_full = [0.0] * n_points
+                        force_full = [-k * x0] * n_points
+                        ke_full = [0.5 * mass * v0**2] * n_points
+                        pe_full = [0.5 * k * x0**2] * n_points
+                        e_total_full = [ke_full[0] + pe_full[0]] * n_points
+                
+                ts.t = t_full
+                ts.x_eq = x_eq_full
+                ts.v = v_full
+                ts.a = a_full
+                ts.force = force_full
+                ts.ke = ke_full
+                ts.pe = pe_full
+                ts.e_total = e_total_full
+
+            elif scenario == "collision_1d":
+                # Two phases: before collision (constant velocity), collision (impulse), after collision (constant velocity)
+                m1 = params.get("m1", 1.0)
+                m2 = params.get("m2", 1.0)
+                v1_i = params.get("v1_initial", params.get("v1_i", 0.0))
+                v2_i = params.get("v2_initial", params.get("v2_i", 0.0))
+                e = params.get("restitution", 1.0)
+                x1_0 = params.get("initial_x1", params.get("x1_0", -5.0))
+                x2_0 = params.get("initial_x2", params.get("x2_0", 5.0))
+                
+                # Calculate final velocities
+                v1_f = ((m1 - e * m2) * v1_i + (1 + e) * m2 * v2_i) / (m1 + m2)
+                v2_f = ((1 + e) * m1 * v1_i + (m2 - e * m1) * v2_i) / (m1 + m2)
+                
+                # Find collision time: when x1 = x2
+                # x1 = x1_0 + v1_i * t, x2 = x2_0 + v2_i * t
+                # Collision when x1_0 + v1_i * t = x2_0 + v2_i * t
+                # t_collision = (x2_0 - x1_0) / (v1_i - v2_i)
+                if abs(v1_i - v2_i) > 1e-6:
+                    t_collision = (x2_0 - x1_0) / (v1_i - v2_i)
+                else:
+                    t_collision = duration / 2  # fallback
+                
+                # Clamp collision time to valid range
+                t_collision = max(0, min(t_collision, duration))
+                
+                x1_full = []
+                x2_full = []
+                v1_full = []
+                v2_full = []
+                a1_full = []
+                a2_full = []
+                force_full = []
+                
+                for t in t_full:
+                    if t < t_collision:
+                        # Before collision: constant velocity
+                        x1 = x1_0 + v1_i * t
+                        x2 = x2_0 + v2_i * t
+                        v1 = v1_i
+                        v2 = v2_i
+                        a1 = 0.0
+                        a2 = 0.0
+                        force = 0.0
+                    elif t == t_collision:
+                        # At collision: use average position, velocities transitioning
+                        x1 = x1_0 + v1_i * t
+                        x2 = x2_0 + v2_i * t
+                        v1 = v1_f
+                        v2 = v2_f
+                        # Impulse approximation
+                        a1 = (v1_f - v1_i) * 1000  # large acceleration during collision
+                        a2 = (v2_f - v2_i) * 1000
+                        force = m1 * abs(a1)  # approximate force
+                    else:
+                        # After collision: constant velocity with new values
+                        dt = t - t_collision
+                        x1 = (x1_0 + v1_i * t_collision) + v1_f * dt
+                        x2 = (x2_0 + v2_i * t_collision) + v2_f * dt
+                        v1 = v1_f
+                        v2 = v2_f
+                        a1 = 0.0
+                        a2 = 0.0
+                        force = 0.0
+                    
+                    x1_full.append(x1)
+                    x2_full.append(x2)
+                    v1_full.append(v1)
+                    v2_full.append(v2)
+                    a1_full.append(a1)
+                    a2_full.append(a2)
+                    force_full.append(force)
+                
+                ts.t = t_full
+                ts.x1 = x1_full
+                ts.x2 = x2_full
+                ts.v1 = v1_full
+                ts.v2 = v2_full
+                ts.a1 = a1_full
+                ts.a2 = a2_full
+                ts.force = force_full
 
         return reasoning_output
 

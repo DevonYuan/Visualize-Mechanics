@@ -4,7 +4,6 @@ from app.schemas import (
     VisionOutput,
     ReasoningOutput,
     AnimationSpec,
-    CameraSpec,
     SolutionStep,
     WorkedSolution,
     TimeSeries,
@@ -66,7 +65,6 @@ class TestReasoningOutput:
             animation_spec=AnimationSpec(
                 duration_s=2.89,
                 fps=30,
-                camera=CameraSpec(position=[0, 5, 15], target=[0, 2, 0]),
             ),
             worked_solution=WorkedSolution(
                 steps=[SolutionStep(step=1, description="Step 1", equation="v = v0 + at")],
@@ -83,7 +81,7 @@ class TestSolveResponse:
             scenario="projectile_motion",
             parameters={"v0": 20.0},
             animation_spec=AnimationSpec(
-                duration_s=2.89, fps=30, camera=CameraSpec(position=[0, 0, 0], target=[0, 0, 0])
+                duration_s=2.89, fps=30
             ),
             worked_solution=WorkedSolution(
                 steps=[SolutionStep(step=1, description="Test")],
