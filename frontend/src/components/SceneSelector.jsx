@@ -11,7 +11,7 @@ export default function SceneSelector({ scenario, timeSeries, currentTime, durat
     case 'projectile_motion':
       return <ProjectileMotionScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} />;
     case 'kinematics_1d':
-      return <Kinematics1DScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} />;
+      return <Kinematics1DScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     case 'inclined_plane':
       return <InclinedPlaneScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     case 'atwood_machine':
