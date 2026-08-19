@@ -5,7 +5,7 @@ from PIL import Image
 from io import BytesIO
 
 from app.services.pipeline import PipelineService
-from app.schemas import VisionOutput, ReasoningOutput, AnimationSpec, CameraSpec, SolutionStep, WorkedSolution, TimeSeries, SolveResponse
+from app.schemas import VisionOutput, ReasoningOutput, AnimationSpec, SolutionStep, WorkedSolution, TimeSeries, SolveResponse
 from app.services.nim_client import NIMClient
 
 
@@ -36,7 +36,6 @@ class TestPipelineService:
             animation_spec=AnimationSpec(
                 duration_s=2.89,
                 fps=30,
-                camera=CameraSpec(position=[0, 5, 15], target=[0, 2, 0]),
             ),
             worked_solution=WorkedSolution(
                 steps=[SolutionStep(step=1, description="Identify knowns", equation=None)],

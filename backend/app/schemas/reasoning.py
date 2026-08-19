@@ -5,12 +5,6 @@ from typing import Literal, Optional
 class AnimationSpec(BaseModel):
     duration_s: float = Field(..., description="Total animation duration in seconds")
     fps: int = Field(30, description="Frames per second for time series")
-    camera: "CameraSpec" = Field(..., description="Camera position and target")
-
-
-class CameraSpec(BaseModel):
-    position: list[float] = Field(..., min_length=3, max_length=3, description="[x, y, z] camera position")
-    target: list[float] = Field(..., min_length=3, max_length=3, description="[x, y, z] camera target")
 
 
 class SolutionStep(BaseModel):
@@ -26,7 +20,7 @@ class WorkedSolution(BaseModel):
 
 class TimeSeries(BaseModel):
     t: list[float] = Field(..., description="Time points (seconds)")
-    # Translational
+    # Translational (single object)
     x: Optional[list[float]] = None
     y: Optional[list[float]] = None
     z: Optional[list[float]] = None
@@ -38,6 +32,13 @@ class TimeSeries(BaseModel):
     ay: Optional[list[float]] = None
     az: Optional[list[float]] = None
     a: Optional[list[float]] = None
+    # Translational (two objects for collision_1d)
+    x1: Optional[list[float]] = None
+    x2: Optional[list[float]] = None
+    v1: Optional[list[float]] = None
+    v2: Optional[list[float]] = None
+    a1: Optional[list[float]] = None
+    a2: Optional[list[float]] = None
     # Rotational
     theta: Optional[list[float]] = None
     omega: Optional[list[float]] = None
@@ -52,7 +53,7 @@ class TimeSeries(BaseModel):
     f_normal: Optional[list[float]] = None
     f_friction: Optional[list[float]] = None
     tension: Optional[list[float]] = None
-    force: Optional[list[float]] = None  # spring force
+    force: Optional[list[float]] = None  # spring force or collision force
 
 
 class ReasoningOutput(BaseModel):

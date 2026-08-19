@@ -1,6 +1,6 @@
 # Visualize Mechanics Backend
 
-(Work in progress) desktop app that accepts physics problem photos, calls NVIDIA NIM (Vision → Reasoning), and returns structured JSON for 3D animation + worked solution.
+(Work in progress) desktop ap that accepts physics problem photos, calls NVIDIA NIM (Vision → Reasoning), and returns structured JSON for 3D animation + worked solution.
 
 ```mermaid
 flowchart LR

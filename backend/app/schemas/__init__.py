@@ -3,7 +3,6 @@ from app.schemas.vision import VisionOutput
 from app.schemas.reasoning import (
     ReasoningOutput,
     AnimationSpec,
-    CameraSpec,
     SolutionStep,
     WorkedSolution,
     TimeSeries,
@@ -16,7 +15,6 @@ __all__ = [
     "VisionOutput",
     "ReasoningOutput",
     "AnimationSpec",
-    "CameraSpec",
     "SolutionStep",
     "WorkedSolution",
     "TimeSeries",
