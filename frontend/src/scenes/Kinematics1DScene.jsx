@@ -6,26 +6,22 @@ import * as THREE from 'three';
 
 function KinematicsContent({ timeSeries, currentFrame, bounds }) {
   const blockRef = useRef();
-  const velocityVectorRef = useRef();
-  const positionGraphRef = useRef();
-  const velocityGraphRef = useRef();
-  const accelGraphRef = useRef();
 
   // Current block position
   const currentPos = useMemo(() => {
-    if (!timeSeries?.x) return new THREE.Vector3(0, 0, 0);
+    if (!timeSeries?.x) return new THREE.Vector3(0, 0.5, 0);
     const idx = Math.min(currentFrame, timeSeries.x.length - 1);
     return new THREE.Vector3(timeSeries.x[idx] || 0, 0.5, 0);
   }, [timeSeries, currentFrame]);
 
-  // Current velocity
+  // Current velocity (for color and optional vector)
   const currentVelocity = useMemo(() => {
     if (!timeSeries?.v) return 0;
     const idx = Math.min(currentFrame, timeSeries.v.length - 1);
     return timeSeries.v[idx] || 0;
   }, [timeSeries, currentFrame]);
 
-  // Current acceleration
+  // Current acceleration (for optional vector)
   const currentAccel = useMemo(() => {
     if (!timeSeries?.a) return 0;
     const idx = Math.min(currentFrame, timeSeries.a.length - 1);
@@ -38,47 +34,6 @@ function KinematicsContent({ timeSeries, currentFrame, bounds }) {
       blockRef.current.position.copy(currentPos);
     }
   });
-
-  // Graph line geometries
-  const createGraphLine = (data, color, scaleX, scaleY, offsetX) => {
-    if (!data || data.length < 2) return null;
-
-    const points = [];
-    const maxPoints = Math.min(data.length, 200);
-    const tMax = timeSeries.t[timeSeries.t.length - 1] || 1;
-
-    for (let i = 0; i < maxPoints; i++) {
-      const t = timeSeries.t[i] || 0;
-      const x = (t / tMax) * scaleX + offsetX;
-      const y = (data[i] || 0) * scaleY;
-      points.push(new THREE.Vector3(x, y, 0));
-    }
-
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    return geometry;
-  };
-
-  const positionGraphGeom = useMemo(() =>
-    createGraphLine(timeSeries?.x, '#3b82f6', bounds.graphWidth, bounds.graphHeight, bounds.graphOffsetX),
-    [timeSeries, bounds.graphWidth, bounds.graphHeight, bounds.graphOffsetX]
-  );
-
-  const velocityGraphGeom = useMemo(() =>
-    createGraphLine(timeSeries?.v, '#22c55e', bounds.graphWidth, bounds.graphHeight, bounds.graphOffsetX),
-    [timeSeries, bounds.graphWidth, bounds.graphHeight, bounds.graphOffsetX]
-  );
-
-  const accelGraphGeom = useMemo(() =>
-    createGraphLine(timeSeries?.a, '#ef4444', bounds.graphWidth, bounds.graphHeight, bounds.graphOffsetX),
-    [timeSeries, bounds.graphWidth, bounds.graphHeight, bounds.graphOffsetX]
-  );
-
-  // Current frame indicators on graphs
-  const graphCurrentX = useMemo(() => {
-    const tMax = timeSeries?.t[timeSeries.t.length - 1] || 1;
-    const t = timeSeries?.t[currentFrame] || 0;
-    return (t / tMax) * bounds.graphWidth + bounds.graphOffsetX;
-  }, [timeSeries, currentFrame, bounds.graphWidth, bounds.graphOffsetX]);
 
   return (
     <>
@@ -109,7 +64,7 @@ function KinematicsContent({ timeSeries, currentFrame, bounds }) {
         />
       </mesh>
 
-      {/* Velocity vector arrow */}
+      {/* Velocity vector arrow (optional - shows direction of motion) */}
       {Math.abs(currentVelocity) > 0.1 && (
         <group position={currentPos}>
           <mesh
@@ -153,173 +108,15 @@ function KinematicsContent({ timeSeries, currentFrame, bounds }) {
         </group>
       )}
 
-      {/* Graphs - Position vs Time */}
-      <group position={[bounds.graphOffsetX, bounds.graphOffsetY + bounds.graphHeight + 1, -3]}>
-        {/* Axes */}
-        <line
-          geometry={new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(bounds.graphWidth, 0, 0),
-          ])}
-          material={new THREE.LineBasicMaterial({ color: '#6b7280' })}
-        />
-        <line
-          geometry={new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, -bounds.graphHeight/2, 0),
-            new THREE.Vector3(0, bounds.graphHeight/2, 0),
-          ])}
-          material={new THREE.LineBasicMaterial({ color: '#6b7280' })}
-        />
-
-        {/* Graph line */}
-        {positionGraphGeom && (
-          <line
-            geometry={positionGraphGeom}
-            material={new THREE.LineBasicMaterial({ color: '#3b82f6', linewidth: 2 })}
-          />
-        )}
-
-        {/* Current point on graph */}
-        <mesh position={[graphCurrentX, 0, 0]} scale={0.1}>
-          <sphereGeometry args={[1, 8, 8]} />
-          <meshBasicMaterial color="#3b82f6" />
-        </mesh>
-
-        {/* Labels */}
-        <Html
-          position={[bounds.graphWidth / 2, -bounds.graphHeight / 2 - 0.5, 0]}
-          style={{ color: '#9ca3af', fontSize: '12px', pointerEvents: 'none', transform: 'translateX(-50%)' }}
-          center
-        >
-          t (s)
-        </Html>
-        <Html
-          position={[-0.8, bounds.graphHeight / 2, 0]}
-          style={{ color: '#3b82f6', fontSize: '12px', pointerEvents: 'none', fontWeight: '600' }}
-        >
-          x (m)
-        </Html>
-        <Html
-          position={[bounds.graphWidth / 2, bounds.graphHeight / 2 + 0.5, 0]}
-          style={{ color: '#3b82f6', fontSize: '12px', pointerEvents: 'none', fontWeight: '600', transform: 'translateX(-50%)' }}
-          center
-        >
-          Position vs Time
-        </Html>
-      </group>
-
-      {/* Graphs - Velocity vs Time */}
-      <group position={[bounds.graphOffsetX + bounds.graphWidth + 3, bounds.graphOffsetY + bounds.graphHeight + 1, -3]}>
-        <line
-          geometry={new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(bounds.graphWidth, 0, 0),
-          ])}
-          material={new THREE.LineBasicMaterial({ color: '#6b7280' })}
-        />
-        <line
-          geometry={new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, -bounds.graphHeight/2, 0),
-            new THREE.Vector3(0, bounds.graphHeight/2, 0),
-          ])}
-          material={new THREE.LineBasicMaterial({ color: '#6b7280' })}
-        />
-
-        {velocityGraphGeom && (
-          <line
-            geometry={velocityGraphGeom}
-            material={new THREE.LineBasicMaterial({ color: '#22c55e', linewidth: 2 })}
-          />
-        )}
-
-        <mesh position={[graphCurrentX, 0, 0]} scale={0.1}>
-          <sphereGeometry args={[1, 8, 8]} />
-          <meshBasicMaterial color="#22c55e" />
-        </mesh>
-
-        <Html
-          position={[bounds.graphWidth / 2, -bounds.graphHeight / 2 - 0.5, 0]}
-          style={{ color: '#9ca3af', fontSize: '12px', pointerEvents: 'none', transform: 'translateX(-50%)' }}
-          center
-        >
-          t (s)
-        </Html>
-        <Html
-          position={[-0.8, bounds.graphHeight / 2, 0]}
-          style={{ color: '#22c55e', fontSize: '12px', pointerEvents: 'none', fontWeight: '600' }}
-        >
-          v (m/s)
-        </Html>
-        <Html
-          position={[bounds.graphWidth / 2, bounds.graphHeight / 2 + 0.5, 0]}
-          style={{ color: '#22c55e', fontSize: '12px', pointerEvents: 'none', fontWeight: '600', transform: 'translateX(-50%)' }}
-          center
-        >
-          Velocity vs Time
-        </Html>
-      </group>
-
-      {/* Graphs - Acceleration vs Time */}
-      <group position={[bounds.graphOffsetX, bounds.graphOffsetY - 1, -3]}>
-        <line
-          geometry={new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(bounds.graphWidth, 0, 0),
-          ])}
-          material={new THREE.LineBasicMaterial({ color: '#6b7280' })}
-        />
-        <line
-          geometry={new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, -bounds.graphHeight/2, 0),
-            new THREE.Vector3(0, bounds.graphHeight/2, 0),
-          ])}
-          material={new THREE.LineBasicMaterial({ color: '#6b7280' })}
-        />
-
-        {accelGraphGeom && (
-          <line
-            geometry={accelGraphGeom}
-            material={new THREE.LineBasicMaterial({ color: '#ef4444', linewidth: 2 })}
-          />
-        )}
-
-        <mesh position={[graphCurrentX, 0, 0]} scale={0.1}>
-          <sphereGeometry args={[1, 8, 8]} />
-          <meshBasicMaterial color="#ef4444" />
-        </mesh>
-
-        <Html
-          position={[bounds.graphWidth / 2, -bounds.graphHeight / 2 - 0.5, 0]}
-          style={{ color: '#9ca3af', fontSize: '12px', pointerEvents: 'none', transform: 'translateX(-50%)' }}
-          center
-        >
-          t (s)
-        </Html>
-        <Html
-          position={[-0.8, bounds.graphHeight / 2, 0]}
-          style={{ color: '#ef4444', fontSize: '12px', pointerEvents: 'none', fontWeight: '600' }}
-        >
-          a (m/s²)
-        </Html>
-        <Html
-          position={[bounds.graphWidth / 2, bounds.graphHeight / 2 + 0.5, 0]}
-          style={{ color: '#ef4444', fontSize: '12px', pointerEvents: 'none', fontWeight: '600', transform: 'translateX(-50%)' }}
-          center
-        >
-          Acceleration vs Time
-        </Html>
-      </group>
-
-      {/* Legend */}
+      {/* Current values display */}
       <Html
-        position={[bounds.graphOffsetX + bounds.graphWidth + 3, bounds.graphOffsetY + bounds.graphHeight + 3.5, -3]}
-        style={{ color: '#9ca3af', fontSize: '11px', pointerEvents: 'none', lineHeight: '1.8' }}
+        position={currentPos.clone().add(new THREE.Vector3(0, 1.5, 0)).toArray()}
+        style={{ color: '#e2e8f0', fontSize: '14px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap' }}
+        center
       >
-        <div style={{ color: '#3b82f6' }}>█ Position (x)</div>
-        <div style={{ color: '#22c55e' }}>█ Velocity (v)</div>
-        <div style={{ color: '#ef4444' }}>█ Acceleration (a)</div>
-        <div style={{ color: '#f97316' }}>▲ Acceleration vector</div>
-        <div style={{ color: '#22c55e' }}>▲ Velocity vector</div>
+        x = {currentPos.x.toFixed(2)} m
+        <br />
+        v = {currentVelocity.toFixed(2)} m/s
       </Html>
     </>
   );
@@ -363,7 +160,6 @@ export default function Kinematics1DScene({ timeSeries, currentTime, duration })
   const bounds = useMemo(() => {
     if (!timeSeries?.x) return {
       minX: -10, maxX: 10, minY: -2, maxY: 5,
-      graphWidth: 8, graphHeight: 4, graphOffsetX: -10, graphOffsetY: -3
     };
     const xs = timeSeries.x.filter(v => v !== undefined);
     const minX = Math.min(...xs);
@@ -374,16 +170,12 @@ export default function Kinematics1DScene({ timeSeries, currentTime, duration })
       maxX: maxX + padding,
       minY: -2,
       maxY: 5,
-      graphWidth: 8,
-      graphHeight: 4,
-      graphOffsetX: -10,
-      graphOffsetY: -3,
     };
   }, [timeSeries]);
 
   return (
     <Canvas
-      camera={{ position: [0, 8, 15], fov: 45 }}
+      camera={{ position: [0, 6, 12], fov: 35 }}
       style={{ width: '100%', height: '100%', touchAction: 'none' }}
       shadows
       gl={{ preserveDrawingBuffer: true, antialias: true }}
