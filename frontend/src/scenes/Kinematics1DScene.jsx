@@ -143,118 +143,19 @@ function KinematicsContent({ timeSeries, currentFrame, bounds, inclineAngle = 0 
             <coneGeometry args={[1, 1, 8]} />
             <meshBasicMaterial color="#22c55e" />
           </mesh>
-        </group>
-      )}
-
-      {/* Acceleration vector (along the incline) */}
-      {Math.abs(currentAccel) > 0.01 && (
-        <group position={blockPos} rotation={[0, 0, blockRotation]}>
-          <mesh
-            position={[Math.sign(currentAccel) * 0.7, 0.1, 0]}
-            scale={[0.1, Math.abs(currentAccel) * 0.1, 0.1]}
-            rotation={currentAccel >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-          <mesh
-            position={[0, Math.abs(currentAccel) * 0.1 + 0.3, 0]}
-            scale={[0.2, 0.2, 0.2]}
-            rotation={currentAccel >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-        </group>
-      )}
-
-      {/* Gravity component indicator (when on incline) */}
-      {inclineAngle !== 0 && (
-        <group position={blockPos}>
-          {/* Gravity vector straight down */}
-          <mesh
-            position={[0, -0.7, 0]}
-            scale={[0.1, 9.8 * 0.08, 0.1]}
-            rotation={[0, 0, -Math.PI / 2]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#ef4444" opacity={0.7} transparent />
-          </mesh>
-          <mesh
-            position={[0, -9.8 * 0.08 - 0.25, 0]}
-            scale={[0.2, 0.2, 0.2]}
-            rotation={[0, 0, -Math.PI / 2]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#ef4444" opacity={0.7} transparent />
-          </mesh>
           <Html
-            position={[0, -1.3, 0]}
-            style={{ color: '#ef4444', fontSize: '11px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap' }}
+            position={[Math.sign(currentVelocity) * 1.2, 1.2, 0]}
+            style={{ color: '#22c55e', fontSize: '10px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap' }}
             center
           >
-            mg
+            v
           </Html>
-          
-          {/* Parallel component mg*sin(theta) along track */}
-          <group rotation={[0, 0, blockRotation]}>
-            <mesh
-              position={[-0.7, 0, 0]}
-              scale={[0.1, 9.8 * Math.sin(Math.abs(angleRad)) * 0.08, 0.1]}
-              rotation={[0, 0, -Math.PI / 2]}
-            >
-              <cylinderGeometry args={[1, 1, 1, 8]} />
-              <meshBasicMaterial color="#f97316" opacity={0.7} transparent />
-            </mesh>
-            <mesh
-              position={[-9.8 * Math.sin(Math.abs(angleRad)) * 0.08 - 0.25, 0, 0]}
-              scale={[0.2, 0.2, 0.2]}
-              rotation={[0, 0, -Math.PI / 2]}
-            >
-              <coneGeometry args={[1, 1, 8]} />
-              <meshBasicMaterial color="#f97316" opacity={0.7} transparent />
-            </mesh>
-            <Html
-              position={[-1.3, 0, 0]}
-              style={{ color: '#f97316', fontSize: '11px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap' }}
-              center
-            >
-              mg·sin({inclineAngle}°)
-            </Html>
-          </group>
-          
-          {/* Perpendicular component mg*cos(theta) into track */}
-          <group rotation={[0, 0, blockRotation]}>
-            <mesh
-              position={[0, 0.7, 0]}
-              scale={[0.1, 9.8 * Math.cos(Math.abs(angleRad)) * 0.08, 0.1]}
-              rotation={[0, 0, Math.PI / 2]}
-            >
-              <cylinderGeometry args={[1, 1, 1, 8]} />
-              <meshBasicMaterial color="#22c55e" opacity={0.7} transparent />
-            </mesh>
-            <mesh
-              position={[0, 9.8 * Math.cos(Math.abs(angleRad)) * 0.08 + 0.25, 0]}
-              scale={[0.2, 0.2, 0.2]}
-              rotation={[0, 0, Math.PI / 2]}
-            >
-              <coneGeometry args={[1, 1, 8]} />
-              <meshBasicMaterial color="#22c55e" opacity={0.7} transparent />
-            </mesh>
-            <Html
-              position={[0, 1.3, 0]}
-              style={{ color: '#22c55e', fontSize: '11px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap' }}
-              center
-            >
-              mg·cos({inclineAngle}°)
-            </Html>
-          </group>
         </group>
       )}
 
       {/* Current values display */}
       <Html
-        position={blockPos.clone().add(new THREE.Vector3(0, 1.6, 0)).toArray()}
+        position={blockPos.clone().add(new THREE.Vector3(0, 1.8, 0)).toArray()}
         style={{ color: '#e2e8f0', fontSize: '13px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap' }}
         center
       >
@@ -262,26 +163,6 @@ function KinematicsContent({ timeSeries, currentFrame, bounds, inclineAngle = 0 
         <br />
         v = {currentVelocity.toFixed(2)} m/s
       </Html>
-
-      {/* Angle indicator at origin */}
-      {inclineAngle !== 0 && (
-        <group>
-          <line
-            geometry={new THREE.BufferGeometry().setFromPoints([
-              new THREE.Vector3(0, 0, 0),
-              new THREE.Vector3(2, 0, 0),
-              new THREE.Vector3(2 * Math.cos(angleRad), 2 * Math.sin(angleRad), 0),
-            ])}
-            material={new THREE.LineBasicMaterial({ color: '#9ca3af', linewidth: 2 })}
-          />
-          <Html
-            position={[1, 0.5, 0]}
-            style={{ color: '#9ca3af', fontSize: '14px', pointerEvents: 'none', transform: 'translate(-50%, -50%)' }}
-          >
-            θ = {inclineAngle}°
-          </Html>
-        </group>
-      )}
     </>
   );
 }
@@ -358,7 +239,10 @@ export default function Kinematics1DScene({ timeSeries, currentTime, duration, p
         distance
       ];
     }
-    return [0, 6, 12];
+    // For horizontal (1D) movement: side view along Z-axis for 2D appearance
+    const trackCenterX = (bounds.minX + bounds.maxX) / 2;
+    const distance = Math.max(trackLength, 15);
+    return [trackCenterX, 1, distance];
   }, [inclineAngle, bounds]);
 
   // Camera target: look at track center on the incline
@@ -374,7 +258,9 @@ export default function Kinematics1DScene({ timeSeries, currentTime, duration, p
         0
       ];
     }
-    return [0, 1, 0];
+    // For horizontal (1D) movement: look at track center from side
+    const trackCenterX = (bounds.minX + bounds.maxX) / 2;
+    return [trackCenterX, 1, 0];
   }, [inclineAngle, bounds]);
 
   return (

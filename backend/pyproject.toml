@@ -14,6 +14,7 @@ dependencies = [
     "pillow>=10.0.0",
     "python-multipart>=0.0.6",
     "python-dotenv>=1.0.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -29,7 +30,7 @@ dev = [
 [tool.uvicorn]
 app = "app.main:app"
 host = "0.0.0.0"
-port = 3000
+port = 8000
 reload = true
 
 [tool.pytest.ini_options]
