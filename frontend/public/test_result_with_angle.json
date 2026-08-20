@@ -5,7 +5,7 @@
     "v0": 0.0,
     "a": 6.0,
     "t_end": 3.0,
-    "angle_deg": 10.0,
+    "angle_deg": 37.7,
     "a_verified": 6.0
   },
   "animation_spec": {
@@ -21,17 +21,24 @@
       },
       {
         "step": 2,
-        "description": "Calculate acceleration",
+        "description": "Calculate acceleration from kinematics",
         "equation": "a = 2 * d / t^2"
       },
       {
         "step": 3,
+        "description": "Compute physical incline angle from acceleration",
+        "equation": "theta = arcsin(a / g)"
+      },
+      {
+        "step": 4,
         "description": "Calculate final velocity",
         "equation": "v = v0 + a * t"
       }
     ],
     "final_answer": {
-      "acceleration": "6.0 m/s^2"
+      "acceleration": "6.0 m/s^2",
+      "final_velocity": "18.0 m/s",
+      "incline_angle": "37.7 deg"
     }
   },
   "time_series": {

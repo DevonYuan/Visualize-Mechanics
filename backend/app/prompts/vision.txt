@@ -7,37 +7,51 @@ Extract physics problem from image and return ONLY this JSON structure:
   "suggested_scenario": "kinematics_1d|inclined_plane|projectile_motion|atwood_machine|collision_1d|rotational_kinematics|mass_spring"
 }
 
-IMPORTANT: Look for angles in diagrams (θ, φ, ° symbols). If visible, include in knowns as "angle": "X deg".
+CRITICAL - ANGLE EXTRACTION FROM DIAGRAMS:
+You MUST carefully examine the diagram for ANY angle indication:
+- Look for angle symbols: θ (theta), φ (phi), α (alpha), β (beta)
+- Look for degree symbols: ° (e.g., "10°", "30°", "45°")
+- Look for angle labels near inclines/ramps/slopes
+- Look for right angle markers (□)
+- If the diagram shows an inclined plane, ramp, slope, or wedge, there IS an angle - find it!
+- If visible, include in knowns as "diagram_angle": "X deg" (e.g., "diagram_angle": "10 deg")
+- NOTE: The diagram angle may not match the physical angle derived from kinematics. The reasoning model will compute the physical angle from a = 2d/t² and θ = arcsin(a/g).
 
-Output ONLY the JSON. No other text.
+SCENARIO CLASSIFICATION RULE (HIGHEST PRIORITY):
+- If problem gives distance (d) and time (t) with "initially at rest" (or v0=0), ALWAYS classify as "kinematics_1d" (constant acceleration from kinematic equations: a = 2d/t²)
+- Only classify as "inclined_plane" if angle and mass are given WITHOUT distance/time data
+- **IMPORTANT**: Even for kinematics_1d, if diagram shows an incline, you MUST still extract the angle for 3D visualization
 
 Scenario types:
 - projectile_motion: Object launched at angle, parabolic trajectory under gravity
-- kinematics_1d: Straight-line motion with constant acceleration
-- inclined_plane: Block on ramp with friction, forces decomposition
+- kinematics_1d: Straight-line motion with constant acceleration (including on inclines if d+t given)
+- inclined_plane: Block on ramp with friction, forces decomposition (when NO d/t given)
 - atwood_machine: Two masses connected by string over pulley
 - collision_1d: Two objects colliding in one dimension
 - rotational_kinematics: Rotating object with angular motion
 - mass_spring: Mass on spring oscillating
 - energy_conservation: Roller coaster, pendulum, spring - energy transforms
 
-IMPORTANT EXTRACTION RULES:
+EXTRACTION RULES:
 - "initially at rest" or "starts from rest" → v0 = 0 m/s
 - "covers a distance of X m" → distance = X m (or d = X m)
 - "in Y s" or "time of Y s" → time = Y s (or t = Y s)
 - "mass m" or "mass of m kg" → mass = m (use numeric value if given, otherwise "m")
 - Include ALL numeric values with units in knowns
 - Unknowns should be the variable NAME only (e.g., "a" for acceleration, "v" for speed)
-- **CRITICAL**: Always extract angle information from diagrams, even if not explicitly stated in text. Look for angle symbols (θ, φ), degree symbols (°), or angle measurements in the diagram. If visible, include in knowns as "angle": "X deg" or "theta": "X deg".
-- **SCENARIO CLASSIFICATION RULE**: If the problem gives distance and time with "initially at rest" (or v0=0), ALWAYS classify as "kinematics_1d" (constant acceleration from kinematic equations). Only classify as "inclined_plane" if angle and mass are given WITHOUT distance/time data.
 
 FEW-SHOT EXAMPLES:
 Example 1: "A car of mass m descending a slope. The car, initially at rest, covers a distance of 27 m in 3.0 s. Diagram shows a 10° incline."
 → suggested_scenario: "kinematics_1d" (distance + time + v0=0 given)
-→ knowns: {"distance": "27 m", "time": "3.0 s", "v0": "0 m/s", "angle": "10 deg"} (include angle from diagram!)
+→ knowns: {"distance": "27 m", "time": "3.0 s", "v0": "0 m/s", "diagram_angle": "10 deg"} (include diagram angle for 3D rendering!)
 
 Example 2: "A block of mass 5 kg on a 30° incline with μ_k = 0.2. Find the acceleration."
 → suggested_scenario: "inclined_plane" (angle + mass given, NO distance/time)
+→ knowns: {"mass": "5 kg", "angle": "30 deg", "mu_k": "0.2"}
+
+Example 3: Diagram shows a block on a ramp labeled "θ = 25°". Text: "A 2 kg block slides down a frictionless incline. Find acceleration."
+→ suggested_scenario: "inclined_plane"
+→ knowns: {"mass": "2 kg", "angle": "25 deg"}
 
 Output STRICT JSON ONLY. No markdown, no explanations, no conversational text, no "Answer:" prefix, no "The problem text is", no "**Known Variables**", no bullet points, no headings. Do not wrap in code fences. Start immediately with { and end with }. Your entire response must be valid JSON and nothing else. Do not include any text before or after the JSON.
 
