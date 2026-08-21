@@ -3,7 +3,7 @@ import { useProblemStore } from './store/useProblemStore';
 import UploadScreen from './components/UploadScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ResultScreen from './components/ResultScreen';
-import TestProjectileMotion from './components/TestProjectileMotion';
+import TestMassSpring from './components/TestMassSpring';
 import './App.css';
 
 function App() {
@@ -27,7 +27,7 @@ function App() {
   return (
     <div className="app">
       {testMode ? (
-        <TestProjectileMotion />
+        <TestMassSpring />
       ) : (
         <>
           {screen === 'upload' && <UploadScreen />}
@@ -51,7 +51,7 @@ function App() {
           fontSize: '12px'
         }}
       >
-        {testMode ? 'Exit Test Mode' : 'Test Projectile Motion'}
+        {testMode ? 'Exit Test Mode' : 'Test Mass Spring System'}
       </button>
     </div>
   );
