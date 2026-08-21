@@ -64,9 +64,11 @@ class ReasoningOutput(BaseModel):
         "atwood_machine",
         "collision_1d",
         "rotational_kinematics",
-        "mass_spring"
+        "mass_spring",
+        "energy_conservation",
+        "conceptual_mc"
     ] = Field(..., description="Classified scenario")
-    parameters: dict[str, float] = Field(..., description="All parameters in SI units")
-    animation_spec: AnimationSpec = Field(..., description="Animation configuration")
+    parameters: dict[str, float] = Field(default_factory=dict, description="All parameters in SI units")
+    animation_spec: Optional[AnimationSpec] = Field(None, description="Animation configuration")
     worked_solution: WorkedSolution = Field(..., description="Step-by-step worked solution")
-    time_series: TimeSeries = Field(..., description="Time-series data at 30 FPS")
+    time_series: Optional[TimeSeries] = Field(None, description="Time-series data at 30 FPS")

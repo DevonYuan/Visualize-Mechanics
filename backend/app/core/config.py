@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     NIM_REASONING_MODEL: str = "meta/llama-3.1-8b-instruct"
 
     # Server
-    PORT: int = 3000
+    PORT: int = 8000
     HOST: str = "0.0.0.0"
 
     # CORS

@@ -31,13 +31,23 @@ class PipelineService:
         logger.info(f"Reasoning classified scenario: {reasoning_output.scenario}")
 
         # 4. Build final response
-        response = SolveResponse(
-            scenario=reasoning_output.scenario,
-            parameters=reasoning_output.parameters,
-            animation_spec=reasoning_output.animation_spec,
-            worked_solution=reasoning_output.worked_solution,
-            time_series=reasoning_output.time_series,
-        )
+        # For conceptual_mc, no animation or time series needed
+        if reasoning_output.scenario == "conceptual_mc":
+            response = SolveResponse(
+                scenario=reasoning_output.scenario,
+                parameters={},
+                animation_spec=None,
+                worked_solution=reasoning_output.worked_solution,
+                time_series=None,
+            )
+        else:
+            response = SolveResponse(
+                scenario=reasoning_output.scenario,
+                parameters=reasoning_output.parameters,
+                animation_spec=reasoning_output.animation_spec,
+                worked_solution=reasoning_output.worked_solution,
+                time_series=reasoning_output.time_series,
+            )
 
         logger.info("Pipeline completed successfully")
         return response

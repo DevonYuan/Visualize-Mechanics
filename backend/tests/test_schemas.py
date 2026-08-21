@@ -45,6 +45,8 @@ class TestVisionOutput:
             "collision_1d",
             "rotational_kinematics",
             "mass_spring",
+            "energy_conservation",
+            "conceptual_mc",
             "unknown",
         ]:
             out = VisionOutput(
@@ -73,6 +75,24 @@ class TestReasoningOutput:
             time_series=TimeSeries(t=[0.0, 0.1], x=[0.0, 1.4], y=[0.0, 1.3]),
         )
         assert out.scenario == "projectile_motion"
+
+    def test_conceptual_mc(self):
+        out = ReasoningOutput(
+            scenario="conceptual_mc",
+            parameters={},
+            animation_spec=None,
+            worked_solution=WorkedSolution(
+                steps=[
+                    SolutionStep(step=1, description="Identify concept", equation=None),
+                    SolutionStep(step=2, description="Analyze options", equation="v_y = v0 * sin(theta)"),
+                ],
+                final_answer={"correct_option": "C", "explanation": "Vertical component is v0*sin(theta)"},
+            ),
+            time_series=None,
+        )
+        assert out.scenario == "conceptual_mc"
+        assert out.animation_spec is None
+        assert out.time_series is None
 
 
 class TestSolveResponse:

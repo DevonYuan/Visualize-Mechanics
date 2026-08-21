@@ -3,9 +3,15 @@ import SceneSelector from './SceneSelector';
 import AnimationPlayer from './AnimationPlayer';
 import WorkedSolutionDisplay from './WorkedSolutionDisplay';
 import VariableOverlay from './VariableOverlay';
+import ConceptualMCResult from './ConceptualMCResult';
 
 export default function ResultScreen() {
-  const { scenario, parameters, animationSpec, timeSeries, reset } = useProblemStore();
+  const { scenario, parameters, animationSpec, timeSeries, workedSolution, reset } = useProblemStore();
+
+  // Handle conceptual MC questions differently - no animation
+  if (scenario === 'conceptual_mc') {
+    return <ConceptualMCResult />;
+  }
 
   const duration = animationSpec?.duration_s || 1;
 

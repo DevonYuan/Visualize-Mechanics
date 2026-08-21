@@ -3,7 +3,7 @@ import { useProblemStore } from './store/useProblemStore';
 import UploadScreen from './components/UploadScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ResultScreen from './components/ResultScreen';
-import TestAngleRender from './components/TestAngleRender';
+import TestProjectileMotion from './components/TestProjectileMotion';
 import './App.css';
 
 function App() {
@@ -36,7 +36,7 @@ function App() {
   return (
     <div className="app">
       {testMode ? (
-        <TestAngleRender />
+        <TestProjectileMotion />
       ) : (
         <>
           {screen === 'upload' && <UploadScreen />}
@@ -60,7 +60,7 @@ function App() {
           fontSize: '12px'
         }}
       >
-        {testMode ? 'Exit Test Mode' : 'Test Angle Render'}
+        {testMode ? 'Exit Test Mode' : 'Test Projectile Motion'}
       </button>
     </div>
   );

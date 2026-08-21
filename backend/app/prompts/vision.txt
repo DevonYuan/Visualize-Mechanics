@@ -22,6 +22,16 @@ SCENARIO CLASSIFICATION RULE (HIGHEST PRIORITY):
 - Only classify as "inclined_plane" if angle and mass are given WITHOUT distance/time data
 - **IMPORTANT**: Even for kinematics_1d, if diagram shows an incline, you MUST still extract the angle for 3D visualization
 
+**CONCEPTUAL/MULTIPLE-CHOICE DETECTION (HIGHEST PRIORITY):**
+- If question has multiple choice options (A, B, C, D or similar letters)
+- If question asks "which expression", "which formula", "which equation", "which of the following"
+- If question asks for a SYMBOLIC answer (e.g., "v0 sin θ", "2 cos 35°") not a number
+- If question can be answered WITHOUT numerical computation
+→ classify as "conceptual_mc" (multiple choice conceptual)
+→ knowns: include any given values
+→ unknowns: the conceptual question being asked
+→ diagram_description: describe the diagram if relevant
+
 Scenario types:
 - projectile_motion: Object launched at angle, parabolic trajectory under gravity
 - kinematics_1d: Straight-line motion with constant acceleration (including on inclines if d+t given)
@@ -31,6 +41,7 @@ Scenario types:
 - rotational_kinematics: Rotating object with angular motion
 - mass_spring: Mass on spring oscillating
 - energy_conservation: Roller coaster, pendulum, spring - energy transforms
+- conceptual_mc: Multiple choice conceptual question (which expression/formula/graph)
 
 EXTRACTION RULES:
 - "initially at rest" or "starts from rest" → v0 = 0 m/s

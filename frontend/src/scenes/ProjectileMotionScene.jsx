@@ -1,12 +1,11 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Html, OrbitControls, Grid } from '@react-three/drei';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useLayoutEffect } from 'react';
 import * as THREE from 'three';
 
 function ProjectileContent({ timeSeries, currentFrame, bounds }) {
   const trajectoryRef = useRef();
   const projectileRef = useRef();
-  const velocityVectorRef = useRef();
 
   // Create trajectory line geometry
   const trajectoryPoints = useMemo(() => {
@@ -50,16 +49,10 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
     return positions;
   }, [timeSeries, currentFrame]);
 
-  // Update projectile position and velocity vector each frame
+  // Update projectile position each frame
   useFrame(() => {
     if (projectileRef.current) {
       projectileRef.current.position.copy(currentPos);
-    }
-    if (velocityVectorRef.current && currentVelocity.length() > 0.1) {
-      const scale = Math.min(2 / currentVelocity.length(), 1);
-      velocityVectorRef.current.setDirection(currentVelocity.clone().normalize());
-      velocityVectorRef.current.scale.set(1, currentVelocity.length() * scale, 1);
-      velocityVectorRef.current.position.copy(currentPos);
     }
   });
 
@@ -71,6 +64,13 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
     }
     return geom;
   }, [trailPositions]);
+
+  // Compute line distances for dashed line (needed for LineDashedMaterial)
+  useLayoutEffect(() => {
+    if (trajectoryRef.current && trajectoryPoints.length > 0) {
+      trajectoryRef.current.computeLineDistances();
+    }
+  }, [trajectoryPoints]);
 
   return (
     <>
@@ -95,14 +95,7 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
           gapSize: 0.15,
           linewidth: 2,
         })}
-      >
-        {trajectoryPoints.length > 0 && (
-          <primitive
-            object={trajectoryRef.current}
-            onUpdate={(obj) => obj.computeLineDistances()}
-          />
-        )}
-      </line>
+      />
 
       {/* Trail effect */}
       {trailPositions.length > 1 && (
@@ -117,7 +110,7 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
         />
       )}
 
-      {/* Projectile (ball) with velocity vector */}
+      {/* Projectile (ball) */}
       <group ref={projectileRef} position={currentPos}>
         <mesh castShadow receiveShadow>
           <sphereGeometry args={[0.3, 16, 16]} />
@@ -127,26 +120,26 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
             metalness={0.1}
           />
         </mesh>
-        {/* Velocity vector arrow */}
-        {currentVelocity.length() > 0.1 && (
-          <group ref={velocityVectorRef}>
-            <mesh
-              position={[0, currentVelocity.length() * 0.05, 0]}
-              scale={[0.15, currentVelocity.length() * 0.1, 0.15]}
-            >
-              <cylinderGeometry args={[1, 1, 1, 8]} />
-              <meshBasicMaterial color="#22c55e" />
-            </mesh>
-            <mesh
-              position={[0, currentVelocity.length() * 0.1 + 0.15, 0]}
-              scale={[0.3, 0.3, 0.3]}
-            >
-              <coneGeometry args={[1, 1, 8]} />
-              <meshBasicMaterial color="#22c55e" />
-            </mesh>
-          </group>
-        )}
       </group>
+
+      {/* Velocity display */}
+      {currentVelocity.length() > 0.1 && (
+        <Html
+          position={currentPos.clone().add(new THREE.Vector3(0, 0.8, 0)).toArray()}
+          style={{
+            color: '#22c55e',
+            fontSize: '14px',
+            pointerEvents: 'none',
+            fontWeight: '600',
+            transform: 'translate(-50%, -50%)',
+            whiteSpace: 'nowrap',
+            textShadow: '0 0 4px #000'
+          }}
+          center
+        >
+          v = ({currentVelocity.x.toFixed(1)}, {currentVelocity.y.toFixed(1)}) m/s
+        </Html>
+      )}
 
       {/* Origin marker */}
       <group position={[0, 0, 0]}>
