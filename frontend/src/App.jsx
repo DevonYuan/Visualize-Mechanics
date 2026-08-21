@@ -24,15 +24,6 @@ function App() {
     }
   }, [uploadStatus]);
 
-  // Handle reset from store
-  useEffect(() => {
-    const unsub = useProblemStore.subscribe(
-      (state) => state.uploadStatus === 'idle' && screen !== 'upload',
-      () => setScreen('upload')
-    );
-    return unsub;
-  }, [screen]);
-
   return (
     <div className="app">
       {testMode ? (

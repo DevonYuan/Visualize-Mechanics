@@ -10,6 +10,10 @@ export default function SceneSelector({ scenario, timeSeries, currentTime, durat
   switch (scenario) {
     case 'projectile_motion':
       return <ProjectileMotionScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} />;
+    case 'conceptual_mc':
+      // Conceptual MC questions that describe a concrete projectile (backend derives
+      // the animation) are visualized with the projectile scene.
+      return <ProjectileMotionScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} />;
     case 'kinematics_1d':
       return <Kinematics1DScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     case 'inclined_plane':

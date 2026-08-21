@@ -37,6 +37,8 @@ export default function VariableOverlay() {
         { key: 'x', label: 'X', unit: 'm' },
         { key: 'y', label: 'Y', unit: 'm' },
         { key: 'z', label: 'Z', unit: 'm' },
+        { key: 'y1', label: 'Y₁', unit: 'm' },
+        { key: 'y2', label: 'Y₂', unit: 'm' },
         { key: 'vx', label: 'Vₓ', unit: 'm/s' },
         { key: 'vy', label: 'Vᵧ', unit: 'm/s' },
         { key: 'vz', label: 'V_z', unit: 'm/s' },

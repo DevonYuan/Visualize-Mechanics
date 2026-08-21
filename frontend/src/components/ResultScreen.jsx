@@ -8,12 +8,16 @@ import ConceptualMCResult from './ConceptualMCResult';
 export default function ResultScreen() {
   const { scenario, parameters, animationSpec, timeSeries, workedSolution, reset } = useProblemStore();
 
-  // Handle conceptual MC questions differently - no animation
-  if (scenario === 'conceptual_mc') {
+  // Conceptual MC questions normally have no animation. If the backend attached
+  // one (e.g. "ball projected at 2 m/s, 35 deg" -> projectile), show the full
+  // result screen so the user sees the physics alongside the MC answer.
+  if (scenario === 'conceptual_mc' && !timeSeries) {
     return <ConceptualMCResult />;
   }
 
-  const duration = animationSpec?.duration_s || 1;
+  // Prefer the animation spec, but fall back to the actual series end so the
+  // scrubber always spans the real data (models sometimes omit animation_spec).
+  const duration = animationSpec?.duration_s || timeSeries?.t?.[timeSeries.t.length - 1] || 1;
 
   const handleNewProblem = () => {
     reset();

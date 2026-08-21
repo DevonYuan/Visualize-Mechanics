@@ -39,6 +39,9 @@ class TimeSeries(BaseModel):
     v2: Optional[list[float]] = None
     a1: Optional[list[float]] = None
     a2: Optional[list[float]] = None
+    # Vertical positions (two objects for atwood_machine)
+    y1: Optional[list[float]] = None
+    y2: Optional[list[float]] = None
     # Rotational
     theta: Optional[list[float]] = None
     omega: Optional[list[float]] = None

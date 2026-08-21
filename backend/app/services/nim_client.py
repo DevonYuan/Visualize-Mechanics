@@ -8,7 +8,7 @@ import numpy as np
 from app.core.config import settings
 from app.utils.json_extract import extract_json
 from app.utils.calculator import Calculator, CALCULATOR_TOOL_DEFINITION
-from app.schemas import VisionOutput, ReasoningOutput
+from app.schemas import VisionOutput, ReasoningOutput, AnimationSpec, TimeSeries
 from app.prompts import VISION_PROMPT, REASONING_PROMPT, FORMULAS_REFERENCE
 
 
@@ -249,23 +249,33 @@ class NIMClient:
         return reasoning_output
 
     def _expand_time_series(self, reasoning_output: ReasoningOutput) -> ReasoningOutput:
-        """Expand 5 key-frame time series to full 30 FPS for all scenarios."""
+        """Regenerate a full 30 FPS time series from physics for ANY key-frame count.
+
+        The reasoning model is asked for 5 key frames, but models are unreliable about
+        the exact count. Instead of trusting those frames, we regenerate the series
+        analytically from the physics parameters when they are present (robust to any
+        key-frame count), and fall back to resampling the model's frames otherwise.
+        """
         ts = reasoning_output.time_series
         if ts is None or not ts.t:
             return reasoning_output
 
-        # Check if we have only 5 key frames (common pattern for all scenarios)
-        if len(ts.t) == 5:
-            # Full 30 FPS expansion
-            fps = reasoning_output.animation_spec.fps if reasoning_output.animation_spec else 30
-            duration = reasoning_output.animation_spec.duration_s if reasoning_output.animation_spec else ts.t[-1]
+        fps = reasoning_output.animation_spec.fps if reasoning_output.animation_spec else 30
+        duration = (
+            reasoning_output.animation_spec.duration_s
+            if reasoning_output.animation_spec and reasoning_output.animation_spec.duration_s > 0
+            else float(ts.t[-1])
+        )
+
+        # Key frames (or fewer) -> regenerate analytically from normalized params.
+        if len(ts.t) <= 5:
             n_points = int(fps * duration) + 1
 
             # Generate full time array
             t_full = np.linspace(0, duration, n_points).tolist()
 
             scenario = reasoning_output.scenario
-            params = reasoning_output.parameters
+            params = self._normalize_parameters(reasoning_output.parameters)
 
             if scenario == "kinematics_1d":
                 # Constant acceleration: x = x0 + v0*t + 0.5*a*t^2, v = v0 + a*t
@@ -322,7 +332,15 @@ class NIMClient:
                 angle_rad = angle_deg * math.pi / 180
                 v0x = v0 * math.cos(angle_rad)
                 v0y = v0 * math.sin(angle_rad)
-                
+
+                # Clamp the animation duration to the true time of flight so the ball
+                # lands at y = 0 instead of falling below the ground (negative y).
+                t_flight = (v0y + math.sqrt(max(v0y ** 2 + 2 * g * initial_height, 0.0))) / g if g > 0 else 0.0
+                if t_flight > 0 and (duration <= 0 or duration > t_flight):
+                    duration = t_flight
+                    n_points = int(fps * duration) + 1
+                    t_full = np.linspace(0, duration, n_points).tolist()
+
                 x_full = [v0x * t for t in t_full]
                 y_full = [initial_height + v0y * t - 0.5 * g * t * t for t in t_full]
                 vx_full = [v0x] * n_points
@@ -412,16 +430,18 @@ class NIMClient:
                     pe_full = [0.5 * k * x_eq**2 for x_eq in x_eq_full]
                     e_total_full = [ke_full[i] + pe_full[i] for i in range(n_points)]
                 else:
-                    # Damped - simplified, just use key frames as-is (complex)
-                    # For now, interpolate from key frames
-                    from scipy import interpolate
+                    # Damped - simplified: resample key frames with numpy (no scipy dependency)
                     if len(ts.x_eq) >= 2:
-                        f_x = interpolate.interp1d(ts.t, ts.x_eq, kind='linear', fill_value='extrapolate')
-                        f_v = interpolate.interp1d(ts.t, ts.v, kind='linear', fill_value='extrapolate')
-                        f_a = interpolate.interp1d(ts.t, ts.a, kind='linear', fill_value='extrapolate')
-                        x_eq_full = f_x(t_full).tolist()
-                        v_full = f_v(t_full).tolist()
-                        a_full = f_a(t_full).tolist()
+                        t_old = np.asarray(ts.t, dtype=float)
+                        x_eq_full = np.interp(t_full, t_old, ts.x_eq).tolist()
+                        if ts.v and len(ts.v) == len(t_old):
+                            v_full = np.interp(t_full, t_old, ts.v).tolist()
+                        else:
+                            v_full = [v0] * n_points
+                        if ts.a and len(ts.a) == len(t_old):
+                            a_full = np.interp(t_full, t_old, ts.a).tolist()
+                        else:
+                            a_full = [0.0] * n_points
                         force_full = [-k * x for x in x_eq_full]
                         ke_full = [0.5 * mass * v**2 for v in v_full]
                         pe_full = [0.5 * k * x**2 for x in x_eq_full]
@@ -526,7 +546,165 @@ class NIMClient:
                 ts.a2 = a2_full
                 ts.force = force_full
 
+        else:
+            # Model returned a longer/non-standard series (not 5 key frames):
+            # resample whatever frames exist onto a uniform timeline at the target
+            # FPS so playback is always smooth and the scrubber stays consistent.
+            self._interpolate_series(ts, fps, duration)
+
         return reasoning_output
+
+    def _normalize_parameters(self, params: dict) -> dict:
+        """Canonicalize parameter keys so downstream code can rely on v0/angle_deg/a.
+
+        Reasoning models are inconsistent about naming (``angle`` vs ``angle_deg`` vs
+        ``theta`` vs ``diagram_angle``). Silently defaulting to 45 degrees produced
+        wrong trajectories, so we normalize aliases here.
+        """
+        import math
+
+        params = dict(params)
+
+        # Angle: accept any alias, always expose as angle_deg (degrees).
+        angle = None
+        for key in ("angle_deg", "angle", "theta", "theta_deg", "diagram_angle", "launch_angle", "inclination"):
+            val = params.get(key)
+            if val is not None:
+                try:
+                    angle = float(val)
+                except (TypeError, ValueError):
+                    continue
+                break
+        if angle is not None:
+            # Heuristic: values <= ~2*pi are assumed radians unless they look like
+            # common degree markings; the reasoning model is instructed to use degrees.
+            if 0 < angle <= 2 * math.pi and angle not in (
+                5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 90, 120, 180
+            ):
+                angle = math.degrees(angle)
+            params["angle_deg"] = float(angle)
+
+        # Initial speed: accept any alias, always expose as v0.
+        v0 = None
+        for key in ("v0", "initial_v", "initial_speed", "speed"):
+            val = params.get(key)
+            if val is not None:
+                try:
+                    v0 = float(val)
+                except (TypeError, ValueError):
+                    continue
+                break
+        if v0 is not None:
+            params["v0"] = float(v0)
+
+        # Acceleration: accept aliases, expose as a.
+        accel = None
+        for key in ("a", "acceleration"):
+            val = params.get(key)
+            if val is not None:
+                try:
+                    accel = float(val)
+                except (TypeError, ValueError):
+                    continue
+                break
+        if accel is not None:
+            params["a"] = float(accel)
+
+        return params
+
+    def _interpolate_series(self, ts: TimeSeries, fps: int, duration: float) -> None:
+        """Resample existing key frames onto a uniform timeline at the target FPS."""
+        if duration <= 0 or not ts.t or len(ts.t) < 2:
+            return
+
+        n_points = int(fps * duration) + 1
+        t_target = np.linspace(0.0, duration, n_points)
+        t_old = np.asarray(ts.t, dtype=float)
+
+        ts.t = t_target.tolist()
+        fields = (
+            "x", "y", "z", "vx", "vy", "vz", "v", "ax", "ay", "az", "a",
+            "x1", "x2", "v1", "v2", "a1", "a2",
+            "theta", "omega", "alpha",
+            "ke", "pe", "e_total", "x_eq",
+            "f_normal", "f_friction", "tension", "force",
+        )
+        for field in fields:
+            values = getattr(ts, field)
+            if values is not None and len(values) == len(t_old):
+                setattr(ts, field, np.interp(t_target, t_old, np.asarray(values, dtype=float)).tolist())
+
+    def build_conceptual_animation(self, vision_output: VisionOutput):
+        """Build animation data for conceptual MC questions that still describe concrete physics.
+
+        A question like "a ball is projected at 2 m/s at 35 deg - which expression gives
+        the vertical component?" is classified as ``conceptual_mc`` (no animation by
+        default), but users still want to SEE the projectile. When the vision output
+        contains a speed and an angle for a projectile-like problem, we derive a full
+        projectile time series so the frontend can animate it alongside the MC answer.
+
+        Returns (animation_spec, time_series) or (None, None) when not derivable.
+        """
+        import math
+
+        knowns = self._extract_known_values(vision_output)
+        text = (vision_output.problem_text or "").lower()
+
+        v0 = (
+            knowns.get("v0")
+            or knowns.get("initial_speed")
+            or knowns.get("initial_velocity")
+            or knowns.get("speed")
+        )
+        angle = (
+            knowns.get("angle")
+            or knowns.get("theta")
+            or knowns.get("diagram_angle")
+            or knowns.get("launch_angle")
+        )
+        if v0 is None or angle is None:
+            return None, None
+
+        # Only animate when this really looks like a projectile problem.
+        if not any(word in text for word in ("project", "launch", "throw", "ball", "trajectory", "horizontal")):
+            return None, None
+
+        angle = float(angle)
+        angle_deg = angle if angle > 10 else math.degrees(angle)
+        v0 = float(v0)
+        g = 9.8
+        angle_rad = math.radians(angle_deg)
+        v0x = v0 * math.cos(angle_rad)
+        v0y = v0 * math.sin(angle_rad)
+
+        # Ground launch: t_flight = 2 * v0y / g. Floor it so tiny flights still render.
+        t_flight = max(2 * v0y / g, 0.1) if g > 0 else 0.1
+        fps = 30
+        n_points = int(fps * t_flight) + 1
+        t = np.linspace(0.0, t_flight, n_points)
+
+        x = v0x * t
+        y = v0y * t - 0.5 * g * t * t
+        vx = np.full_like(t, v0x)
+        vy = v0y - g * t
+        v = np.sqrt(vx ** 2 + vy ** 2)
+        ax = np.zeros_like(t)
+        ay = np.full_like(t, -g)
+        a = np.full_like(t, g)
+
+        time_series = TimeSeries(
+            t=t.tolist(),
+            x=x.tolist(),
+            y=y.tolist(),
+            vx=vx.tolist(),
+            vy=vy.tolist(),
+            v=v.tolist(),
+            ax=ax.tolist(),
+            ay=ay.tolist(),
+            a=a.tolist(),
+        )
+        animation_spec = AnimationSpec(duration_s=float(t_flight), fps=fps)
+        return animation_spec, time_series
 
     @retry(
         wait=wait_exponential(multiplier=1, min=2, max=10),

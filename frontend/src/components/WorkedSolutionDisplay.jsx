@@ -37,7 +37,7 @@ export default function WorkedSolutionDisplay() {
           <h3>Final Answers</h3>
           <div className="answers-grid">
             {Object.entries(workedSolution.final_answer).map(([key, value]) => (
-              <div key={key} className="answer-item">
+              <div key={key} className={`answer-item ${/correct/i.test(key) ? 'correct' : ''}`}>
                 <span className="answer-label">{formatAnswerLabel(key)}</span>
                 <span className="answer-value">{value}</span>
               </div>
@@ -149,6 +149,17 @@ export default function WorkedSolutionDisplay() {
           background: #f0f9ff;
           border-radius: 8px;
           border: 1px solid #bae6fd;
+        }
+        .answer-item.correct {
+          background: #ecfdf5;
+          border-color: #34d399;
+          box-shadow: 0 0 0 1px #34d399;
+        }
+        .answer-item.correct .answer-label {
+          color: #047857;
+        }
+        .answer-item.correct .answer-value {
+          color: #065f46;
         }
         .answer-label {
           font-size: 0.75rem;

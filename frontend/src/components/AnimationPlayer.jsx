@@ -12,7 +12,7 @@ export default function AnimationPlayer() {
   } = useProblemStore();
 
   const [localTime, setLocalTime] = useState(currentTime);
-  const duration = animationSpec?.duration_s || 1;
+  const duration = animationSpec?.duration_s || timeSeries?.t?.[timeSeries.t.length - 1] || 1;
   const frameIntervalRef = useRef(null);
   const lastFrameTimeRef = useRef(0);
 
@@ -45,6 +45,8 @@ export default function AnimationPlayer() {
       ay: timeSeries.ay?.[idx],
       az: timeSeries.az?.[idx],
       a: timeSeries.a?.[idx],
+      y1: timeSeries.y1?.[idx],
+      y2: timeSeries.y2?.[idx],
       theta: timeSeries.theta?.[idx],
       omega: timeSeries.omega?.[idx],
       alpha: timeSeries.alpha?.[idx],

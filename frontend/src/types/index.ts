@@ -7,7 +7,9 @@ export type ScenarioType =
   | 'atwood_machine'
   | 'collision_1d'
   | 'rotational_kinematics'
-  | 'mass_spring';
+  | 'mass_spring'
+  | 'energy_conservation'
+  | 'conceptual_mc';
 
 export interface CameraSpec {
   position: [number, number, number];
@@ -45,6 +47,16 @@ export interface TimeSeries {
   ay?: number[];
   az?: number[];
   a?: number[];
+  // Translational (two objects for collision_1d)
+  x1?: number[];
+  x2?: number[];
+  v1?: number[];
+  v2?: number[];
+  a1?: number[];
+  a2?: number[];
+  // Vertical positions (two objects for atwood_machine)
+  y1?: number[];
+  y2?: number[];
   // Rotational
   theta?: number[];
   omega?: number[];
@@ -65,9 +77,11 @@ export interface TimeSeries {
 export interface SolveResponse {
   scenario: ScenarioType;
   parameters: Record<string, number>;
-  animation_spec: AnimationSpec;
+  // Conceptual MC responses have no animation / time series (unless the backend
+  // derives one from concrete numbers in the question).
+  animation_spec?: AnimationSpec | null;
   worked_solution: WorkedSolution;
-  time_series: TimeSeries;
+  time_series?: TimeSeries | null;
 }
 
 export interface UploadState {
@@ -91,6 +105,14 @@ export function getFrameData(timeSeries: TimeSeries, frameIndex: number): Record
     ay: timeSeries.ay?.[frameIndex],
     az: timeSeries.az?.[frameIndex],
     a: timeSeries.a?.[frameIndex],
+    x1: timeSeries.x1?.[frameIndex],
+    x2: timeSeries.x2?.[frameIndex],
+    v1: timeSeries.v1?.[frameIndex],
+    v2: timeSeries.v2?.[frameIndex],
+    a1: timeSeries.a1?.[frameIndex],
+    a2: timeSeries.a2?.[frameIndex],
+    y1: timeSeries.y1?.[frameIndex],
+    y2: timeSeries.y2?.[frameIndex],
     theta: timeSeries.theta?.[frameIndex],
     omega: timeSeries.omega?.[frameIndex],
     alpha: timeSeries.alpha?.[frameIndex],
@@ -105,8 +127,13 @@ export function getFrameData(timeSeries: TimeSeries, frameIndex: number): Record
   };
 }
 
+/**
+ * Maps a playback time to the frame index, using the same lookup the 3D scenes use
+ * (first sample at or after `currentTime`), so the variable overlay and the scene
+ * always agree on which frame is shown.
+ */
 export function getFrameIndex(timeSeries: TimeSeries, currentTime: number): number {
-  const duration = timeSeries.t[timeSeries.t.length - 1] || 1;
-  const ratio = Math.min(Math.max(currentTime / duration, 0), 1);
-  return Math.floor(ratio * (timeSeries.t.length - 1));
+  if (!timeSeries?.t?.length) return 0;
+  const idx = timeSeries.t.findIndex(t => t >= currentTime);
+  return idx >= 0 ? Math.min(idx, timeSeries.t.length - 1) : timeSeries.t.length - 1;
 }

@@ -31,14 +31,18 @@ class PipelineService:
         logger.info(f"Reasoning classified scenario: {reasoning_output.scenario}")
 
         # 4. Build final response
-        # For conceptual_mc, no animation or time series needed
+        # For conceptual_mc, no animation or time series needed UNLESS the question
+        # still describes concrete physics (e.g., "ball projected at 2 m/s, 35 deg").
+        # In that case we derive a projectile animation so the user sees the physics
+        # alongside the multiple-choice answer.
         if reasoning_output.scenario == "conceptual_mc":
+            animation_spec, time_series = self.nim_client.build_conceptual_animation(vision_output)
             response = SolveResponse(
                 scenario=reasoning_output.scenario,
                 parameters={},
-                animation_spec=None,
+                animation_spec=animation_spec,
                 worked_solution=reasoning_output.worked_solution,
-                time_series=None,
+                time_series=time_series,
             )
         else:
             response = SolveResponse(

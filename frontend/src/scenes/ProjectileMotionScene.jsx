@@ -7,6 +7,15 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
   const trajectoryRef = useRef();
   const projectileRef = useRef();
 
+  // Auto-scale visual elements to the trajectory size so tiny problems
+  // (e.g. v0=2 m/s -> a 0.38 m arc) still render clearly instead of as a blob.
+  const maxDim = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) || 1;
+  const ballRadius = Math.min(Math.max(maxDim * 0.03, 0.03), 0.6);
+  const dashSize = ballRadius * 2.0;
+  const gapSize = ballRadius;
+  const labelOffset = ballRadius * 2.5;
+  const trailLength = Math.max(10, Math.min(40, Math.floor(maxDim * 10)));
+
   // Create trajectory line geometry
   const trajectoryPoints = useMemo(() => {
     if (!timeSeries?.x || !timeSeries?.y) return [];
@@ -36,11 +45,11 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
     return new THREE.Vector3(timeSeries.vx[idx] || 0, timeSeries.vy[idx] || 0, 0);
   }, [timeSeries, currentFrame]);
 
-  // Trail positions (last 20 frames)
+  // Trail positions (last N frames, scaled to trajectory size)
   const trailPositions = useMemo(() => {
     if (!timeSeries?.x || !timeSeries?.y) return [];
     const positions = [];
-    const start = Math.max(0, currentFrame - 20);
+    const start = Math.max(0, currentFrame - trailLength);
     for (let i = start; i <= currentFrame; i++) {
       if (i < timeSeries.x.length) {
         positions.push(new THREE.Vector3(timeSeries.x[i], timeSeries.y[i], 0));
@@ -91,8 +100,8 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
         geometry={new THREE.BufferGeometry().setFromPoints(trajectoryPoints)}
         material={new THREE.LineDashedMaterial({
           color: '#3b82f6',
-          dashSize: 0.3,
-          gapSize: 0.15,
+          dashSize,
+          gapSize,
           linewidth: 2,
         })}
       />
@@ -110,10 +119,10 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
         />
       )}
 
-      {/* Projectile (ball) */}
+      {/* Projectile (ball) - radius scaled to trajectory size */}
       <group ref={projectileRef} position={currentPos}>
         <mesh castShadow receiveShadow>
-          <sphereGeometry args={[0.3, 16, 16]} />
+          <sphereGeometry args={[ballRadius, 16, 16]} />
           <meshStandardMaterial
             color="#ef4444"
             roughness={0.3}
@@ -125,7 +134,7 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
       {/* Velocity display */}
       {currentVelocity.length() > 0.1 && (
         <Html
-          position={currentPos.clone().add(new THREE.Vector3(0, 0.8, 0)).toArray()}
+          position={currentPos.clone().add(new THREE.Vector3(0, labelOffset, 0)).toArray()}
           style={{
             color: '#22c55e',
             fontSize: '14px',
@@ -144,7 +153,7 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
       {/* Origin marker */}
       <group position={[0, 0, 0]}>
         <mesh>
-          <cylinderGeometry args={[0.15, 0.15, 0.2, 16]} />
+          <cylinderGeometry args={[ballRadius * 0.5, ballRadius * 0.5, ballRadius * 0.66, 16]} />
           <meshBasicMaterial color="#6b7280" transparent opacity={0.5} />
         </mesh>
       </group>
@@ -160,28 +169,30 @@ function ProjectileContent({ timeSeries, currentFrame, bounds }) {
   );
 }
 
-// Camera controller for proper framing
-function CameraController({ bounds }) {
+// Frames the trajectory ONCE on mount, then hands the camera to OrbitControls.
+// (Previously a per-frame lerp fought OrbitControls and made orbiting jittery.)
+function FrameCamera({ bounds }) {
   const { camera } = useThree();
+  const { minX, maxX, minY, maxY } = bounds;
 
-  useFrame(() => {
-    const centerX = (bounds.maxX + bounds.minX) / 2;
-    const centerY = (bounds.maxY + bounds.minY) / 2;
-    const maxDim = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
-
-    // Position camera to frame the whole trajectory
-    const distance = Math.max(maxDim * 1.2, 10);
-    camera.position.lerp(
-      new THREE.Vector3(centerX, centerY, distance),
-      0.05
-    );
+  useLayoutEffect(() => {
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const maxDim = Math.max(maxX - minX, maxY - minY) || 1;
+    camera.position.set(centerX, centerY, Math.max(maxDim * 1.4, 2.5));
+    camera.near = 0.1;
+    camera.far = Math.max(maxDim * 20, 100);
     camera.lookAt(centerX, centerY, 0);
-  });
+    camera.updateProjectionMatrix();
+  }, [camera, minX, maxX, minY, maxY]);
 
   return null;
 }
 
 function ProjectileInner({ timeSeries, currentFrame, bounds }) {
+  const centerX = bounds.minX + (bounds.maxX - bounds.minX) / 2;
+  const centerY = bounds.minY + (bounds.maxY - bounds.minY) / 2;
+
   return (
     <>
       <ambientLight intensity={0.6} />
@@ -194,10 +205,10 @@ function ProjectileInner({ timeSeries, currentFrame, bounds }) {
         enableRotate={true}
         minZoom={0.5}
         maxZoom={5}
-        target={[bounds.minX + (bounds.maxX - bounds.minX) / 2, bounds.minY + (bounds.maxY - bounds.minY) / 2, 0]}
+        target={[centerX, centerY, 0]}
       />
 
-      <CameraController bounds={bounds} />
+      <FrameCamera bounds={bounds} />
       <ProjectileContent
         timeSeries={timeSeries}
         currentFrame={currentFrame}
@@ -226,7 +237,11 @@ export default function ProjectileMotionScene({ timeSeries, currentTime, duratio
     const maxX = Math.max(...xs);
     const minY = Math.min(0, ...ys);
     const maxY = Math.max(...ys);
-    const padding = Math.max((maxX - minX) * 0.15, 2);
+    // Scale-aware padding: tiny arcs (e.g. v0=2 m/s) must not be lost in a
+    // fixed 2-unit margin that made them render as a dot.
+    const spanX = Math.max(maxX - minX, 1e-6);
+    const spanY = Math.max(maxY - minY, 1e-6);
+    const padding = Math.max(spanX * 0.25, spanY * 0.25, 0.5);
     return { minX: minX - padding, maxX: maxX + padding, minY: minY - padding, maxY: maxY + padding };
   }, [timeSeries]);
 
