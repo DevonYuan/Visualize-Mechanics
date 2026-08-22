@@ -7,7 +7,6 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
   const massRef = useRef();
   const springRef = useRef();
   const velocityVectorRef = useRef();
-  const forceVectorRef = useRef();
   const supportRef = useRef();
 
   // Current displacement from equilibrium
@@ -79,15 +78,6 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
       velocityVectorRef.current.scale.y = scale;
       velocityVectorRef.current.rotation.x = currentV >= 0 ? Math.PI : 0;
     }
-
-    // Spring force vector (F = -kx, points toward equilibrium)
-    if (forceVectorRef.current && Math.abs(currentForce) > 0.1) {
-      forceVectorRef.current.position.y = massY;
-      const scale = Math.max(Math.abs(currentForce) * 0.05, 0.2); // Scale factor for force
-      forceVectorRef.current.scale.y = scale;
-      // Force points toward equilibrium (opposite to displacement)
-      forceVectorRef.current.rotation.x = currentForce >= 0 ? Math.PI : 0;
-    }
   });
 
   // Graph helpers removed — energy graphs are not part of the core render.
@@ -135,13 +125,6 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
             metalness={0.1}
           />
         </mesh>
-        <Html
-          position={[0, 0, 0]}
-          style={{ color: '#e2e8f0', fontSize: '14px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)' }}
-          center
-        >
-          m = {parameters?.mass?.toFixed(1) || '?'} kg
-        </Html>
       </group>
 
       {/* Equilibrium line */}
@@ -179,45 +162,10 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
             <coneGeometry args={[1, 1, 8]} />
             <meshBasicMaterial color="#22c55e" />
           </mesh>
-          <Html
-            position={[0.8, Math.abs(currentV) * 0.15 + 0.5, 1.5]}
-            style={{ color: '#22c55e', fontSize: '12px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)' }}
-            center
-          >
-            v = {currentV.toFixed(2)} m/s
-          </Html>
         </group>
       )}
 
-      {/* Spring force vector (F = -kx, points toward equilibrium) */}
-      {Math.abs(currentForce) > 0.1 && (
-        <group ref={forceVectorRef} position={[0, massY, -1.5]}>
-          <mesh
-            position={[0, Math.abs(currentForce) * 0.025, 0]}
-            scale={[0.15, Math.abs(currentForce) * 0.05, 0.15]}
-            rotation={currentForce >= 0 ? [Math.PI, 0, 0] : [0, 0, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-          <mesh
-            position={[0, Math.abs(currentForce) * 0.05 + 0.2, 0]}
-            scale={0.25}
-            rotation={currentForce >= 0 ? [Math.PI, 0, 0] : [0, 0, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-          <Html
-            position={[-0.8, Math.abs(currentForce) * 0.05 + 0.5, -1.5]}
-            style={{ color: '#f97316', fontSize: '12px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)' }}
-            center
-          >
-            F = {currentForce.toFixed(2)} N
-          </Html>
-        </group>
-      )}
-    </>
+      </>
   );
 }
 
@@ -235,25 +183,75 @@ function MassSpringScene({ timeSeries, currentTime, duration, parameters }) {
     };
   }, [timeSeries, parameters]);
 
+  // Compute current values for overlay
+  const currentX = timeSeries?.x_eq?.[Math.min(frame, (timeSeries.x_eq?.length || 1) - 1)] ?? parameters?.x0 ?? 0;
+  const currentV = timeSeries?.v?.[Math.min(frame, (timeSeries.v?.length || 1) - 1)] ?? parameters?.v0 ?? 0;
+  const k = parameters?.k ?? 1;
+  const currentForce = -k * currentX;
+
+  const massValue = parameters?.mass?.toFixed(1) ?? '?';
+  const kValue = parameters?.k?.toFixed(0) ?? '?';
+  const gValue = parameters?.g?.toFixed(1) ?? '9.8';
+  const omegaValue = parameters?.omega?.toFixed(1) ?? '?';
+  const periodValue = parameters?.period?.toFixed(3) ?? '?';
+  const amplitudeValue = parameters?.amplitude?.toFixed(3) ?? '?';
+
   return (
-    <Canvas
-      camera={{ position: [0, 5, 12], fov: 45 }}
-      shadows
-      style={{ width: '100%', height: '100%' }}
-    >
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[5, 10, 7]} intensity={1} castShadow />
-      <directionalLight position={[-5, 5, -7]} intensity={0.5} />
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <Canvas
+        camera={{ position: [0, 5, 12], fov: 45 }}
+        shadows
+        style={{ width: '100%', height: '100%' }}
+      >
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[5, 10, 7]} intensity={1} castShadow />
+        <directionalLight position={[-5, 5, -7]} intensity={0.5} />
 
-      <MassSpringContent
-        timeSeries={timeSeries}
-        currentFrame={frame}
-        parameters={parameters}
-        bounds={bounds}
-      />
+        <MassSpringContent
+          timeSeries={timeSeries}
+          currentFrame={frame}
+          parameters={parameters}
+          bounds={bounds}
+        />
 
-      <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
-    </Canvas>
+        <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
+      </Canvas>
+
+      {/* Screen-space overlay - fixed position like TestMassSpring header */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        zIndex: 10,
+        background: 'rgba(17, 24, 39, 0.95)',
+        padding: '16px',
+        borderRadius: '8px',
+        color: '#e2e8f0',
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        lineHeight: '1.8',
+        border: '1px solid #374151',
+        minWidth: '220px',
+        pointerEvents: 'none',
+      }}>
+        <div style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '10px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Parameters</div>
+        <div>m = {massValue} kg</div>
+        <div>k = {kValue} N/m</div>
+        <div>g = {gValue} m/s²</div>
+        <div style={{ borderTop: '1px solid #374151', marginTop: '10px', paddingTop: '10px' }}>
+          <div style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Derived</div>
+          <div>ω = {omegaValue} rad/s</div>
+          <div>T = {periodValue} s</div>
+          <div>A = {amplitudeValue} m</div>
+        </div>
+        <div style={{ borderTop: '1px solid #374151', marginTop: '10px', paddingTop: '10px' }}>
+          <div style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current</div>
+          <div style={{ color: '#f97316', fontWeight: '600' }}>F = {currentForce.toFixed(1)} N</div>
+          <div style={{ color: '#22c55e' }}>v = {currentV.toFixed(2)} m/s</div>
+          <div style={{ color: '#fbbf24' }}>x = {currentX.toFixed(3)} m</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
