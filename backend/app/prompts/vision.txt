@@ -32,6 +32,12 @@ SCENARIO CLASSIFICATION RULE (HIGHEST PRIORITY):
 → unknowns: the conceptual question being asked
 → diagram_description: describe the diagram if relevant
 
+**MASS-SPRING DETECTION RULES:**
+- If problem mentions "mass on a spring", "spring constant k", "oscillat", "SHM", "simple harmonic"
+- If diagram shows a vertical/horizontal spring with attached mass
+- Look for: spring constant (k), mass (m), initial displacement (x₀ or A), initial velocity (v₀)
+- For vertical springs: equilibrium extension x_eq = mg/k may be shown
+
 Scenario types:
 - projectile_motion: Object launched at angle, parabolic trajectory under gravity
 - kinematics_1d: Straight-line motion with constant acceleration (including on inclines if d+t given)
@@ -63,6 +69,22 @@ Example 2: "A block of mass 5 kg on a 30° incline with μ_k = 0.2. Find the acc
 Example 3: Diagram shows a block on a ramp labeled "θ = 25°". Text: "A 2 kg block slides down a frictionless incline. Find acceleration."
 → suggested_scenario: "inclined_plane"
 → knowns: {"mass": "2 kg", "angle": "25 deg"}
+
+Example 4: "A 0.5 kg mass attached to a spring (k = 200 N/m) is displaced 0.1 m from equilibrium and released from rest. Find the period and maximum speed."
+→ suggested_scenario: "mass_spring"
+→ knowns: {"mass": "0.5 kg", "k": "200 N/m", "x0": "0.1 m", "v0": "0 m/s"}
+→ unknowns: ["period", "max_speed", "omega"]
+
+Example 5: Diagram shows a vertical spring with mass m = 2 kg, spring constant k = 50 N/m. The mass is pulled down 0.15 m from equilibrium and released.
+→ suggested_scenario: "mass_spring"
+→ knowns: {"mass": "2 kg", "k": "50 N/m", "x0": "0.15 m", "v0": "0 m/s"}
+→ unknowns: ["period", "frequency", "max_acceleration"]
+
+Example 6: Diagram shows a vertical spring with mass m = 0.1 kg, spring constant k = 40 N/m, g = 10 m/s². The block is attached to an UNSTRETCHED spring and released from rest.
+→ suggested_scenario: "mass_spring"
+→ knowns: {"mass": "0.1 kg", "k": "40 N/m", "g": "10 m/s^2", "v0": "0 m/s"}
+→ unknowns: ["amplitude", "period", "omega"]
+→ diagram_description: "Vertical spring initially unstretched, block attached and released"
 
 Output STRICT JSON ONLY. No markdown, no explanations, no conversational text, no "Answer:" prefix, no "The problem text is", no "**Known Variables**", no bullet points, no headings. Do not wrap in code fences. Start immediately with { and end with }. Your entire response must be valid JSON and nothing else. Do not include any text before or after the JSON.
 

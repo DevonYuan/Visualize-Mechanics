@@ -7,6 +7,7 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
   const massRef = useRef();
   const springRef = useRef();
   const velocityVectorRef = useRef();
+  const forceVectorRef = useRef();
   const supportRef = useRef();
 
   // Current displacement from equilibrium
@@ -29,6 +30,10 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
     const idx = Math.min(currentFrame, timeSeries.a.length - 1);
     return timeSeries.a[idx] ?? 0;
   }, [timeSeries, currentFrame]);
+
+  // Spring force (F = -k * x)
+  const k = parameters?.k || 1;
+  const currentForce = useMemo(() => -k * currentX, [k, currentX]);
 
   // Spring parameters
   const equilibriumY = bounds.equilibriumY || 3;
@@ -73,6 +78,15 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
       const scale = Math.max(Math.abs(currentV) * 0.15, 0.2);
       velocityVectorRef.current.scale.y = scale;
       velocityVectorRef.current.rotation.x = currentV >= 0 ? Math.PI : 0;
+    }
+
+    // Spring force vector (F = -kx, points toward equilibrium)
+    if (forceVectorRef.current && Math.abs(currentForce) > 0.1) {
+      forceVectorRef.current.position.y = massY;
+      const scale = Math.max(Math.abs(currentForce) * 0.05, 0.2); // Scale factor for force
+      forceVectorRef.current.scale.y = scale;
+      // Force points toward equilibrium (opposite to displacement)
+      forceVectorRef.current.rotation.x = currentForce >= 0 ? Math.PI : 0;
     }
   });
 
@@ -171,6 +185,35 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
             center
           >
             v = {currentV.toFixed(2)} m/s
+          </Html>
+        </group>
+      )}
+
+      {/* Spring force vector (F = -kx, points toward equilibrium) */}
+      {Math.abs(currentForce) > 0.1 && (
+        <group ref={forceVectorRef} position={[0, massY, -1.5]}>
+          <mesh
+            position={[0, Math.abs(currentForce) * 0.025, 0]}
+            scale={[0.15, Math.abs(currentForce) * 0.05, 0.15]}
+            rotation={currentForce >= 0 ? [Math.PI, 0, 0] : [0, 0, 0]}
+          >
+            <cylinderGeometry args={[1, 1, 1, 8]} />
+            <meshBasicMaterial color="#f97316" />
+          </mesh>
+          <mesh
+            position={[0, Math.abs(currentForce) * 0.05 + 0.2, 0]}
+            scale={0.25}
+            rotation={currentForce >= 0 ? [Math.PI, 0, 0] : [0, 0, 0]}
+          >
+            <coneGeometry args={[1, 1, 8]} />
+            <meshBasicMaterial color="#f97316" />
+          </mesh>
+          <Html
+            position={[-0.8, Math.abs(currentForce) * 0.05 + 0.5, -1.5]}
+            style={{ color: '#f97316', fontSize: '12px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)' }}
+            center
+          >
+            F = {currentForce.toFixed(2)} N
           </Html>
         </group>
       )}

@@ -214,6 +214,29 @@ class NIMClient:
                     period_correct = Calculator.evaluate("2 * pi / omega", {"omega": omega_correct})
                     params["period_verified"] = period_correct
 
+                # Verify amplitude and initial displacement for vertical spring
+                x0 = known_values.get("x0") or params.get("x0")
+                v0 = known_values.get("v0") or params.get("v0")
+                g = known_values.get("g") or params.get("g", 9.8)
+                if mass and k and x0 is not None and v0 is not None:
+                    # For vertical spring released from unstretched: x0 = mg/k
+                    # Check if this is a vertical spring (g is provided and x0 from problem is 0 or not given)
+                    x0_problem = known_values.get("x0")
+                    if x0_problem is None or x0_problem == 0:
+                        # Block released from unstretched position
+                        x0_correct = Calculator.evaluate("mass * g / k", {"mass": mass, "g": g, "k": k})
+                        params["x0_verified"] = x0_correct
+                        params["amplitude_verified"] = x0_correct
+                    else:
+                        # Standard case: amplitude from initial conditions
+                        if "omega_verified" in params:
+                            amp_correct = Calculator.evaluate("sqrt(x0**2 + (v0/omega)**2)",
+                                                            {"x0": x0, "v0": v0, "omega": params["omega_verified"]})
+                        else:
+                            amp_correct = Calculator.evaluate("sqrt(x0**2 + (v0/omega)**2)",
+                                                            {"x0": x0, "v0": v0, "omega": omega_correct})
+                        params["amplitude_verified"] = amp_correct
+
             elif scenario == "collision_1d":
                 # Verify final velocities using conservation of momentum and restitution
                 m1 = known_values.get("m1") or params.get("m1")
@@ -756,6 +779,11 @@ Suggested Scenario: {vision_output.suggested_scenario}
                 # Try to parse as JSON
                 try:
                     data = extract_json(raw_content)
+                    
+                    # Handle case where model returns just the steps array instead of full object
+                    if isinstance(data, list):
+                        raise ValueError("Model returned steps array instead of full JSON object")
+                    
                     reasoning_output = ReasoningOutput.model_validate(data)
 
                     # Verify and correct critical calculated values
@@ -763,16 +791,23 @@ Suggested Scenario: {vision_output.suggested_scenario}
                     # Expand time series from key frames to full 30 FPS
                     reasoning_output = self._expand_time_series(reasoning_output)
                     return reasoning_output
-                except Exception:
+                except Exception as e:
                     # Not valid JSON - continue loop with reminder to output JSON
                     messages.append({
                         "role": "assistant",
                         "content": message.content,
                     })
-                    messages.append({
-                        "role": "user",
-                        "content": "Please provide the final answer as valid JSON only, following the schema. No explanations or conversational text."
-                    })
+                    error_msg = str(e)
+                    if "steps array" in error_msg:
+                        messages.append({
+                            "role": "user",
+                            "content": "You returned only the 'steps' array. You MUST output the complete JSON object with all required fields: scenario, parameters, animation_spec, worked_solution (with steps AND final_answer), and time_series. See the EXAMPLE OUTPUT format in the system prompt."
+                        })
+                    else:
+                        messages.append({
+                            "role": "user",
+                            "content": "Please provide the final answer as valid JSON only, following the schema. No explanations or conversational text."
+                        })
                     continue
 
             # Add assistant message with tool calls
@@ -818,7 +853,7 @@ Suggested Scenario: {vision_output.suggested_scenario}
         # If we exit the loop without a final answer, try one more time without tools
         response = await self.client.chat.completions.create(
             model=self.reasoning_model,
-            messages=messages + [{"role": "user", "content": "Provide the final JSON answer now."}],
+            messages=messages + [{"role": "user", "content": "Provide the final JSON answer now. You MUST output the complete JSON object with all required fields: scenario, parameters, animation_spec, worked_solution (with steps AND final_answer), and time_series. See the EXAMPLE OUTPUT format in the system prompt."}],
             max_tokens=4096,
             temperature=0.1,
         )
@@ -828,6 +863,11 @@ Suggested Scenario: {vision_output.suggested_scenario}
             raise ValueError("Empty response from reasoning model after tool use")
 
         data = extract_json(raw_content)
+        
+        # Handle case where model returns just the steps array instead of full object
+        if isinstance(data, list):
+            raise ValueError("Model returned steps array instead of full JSON object after final attempt")
+        
         reasoning_output = ReasoningOutput.model_validate(data)
 
         # Verify and correct critical calculated values
