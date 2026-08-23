@@ -23,15 +23,15 @@ export default function ParametersDisplay() {
   );
   
   const physicalParams = displayParams.filter(([key]) => 
-    ['radius', 'object_type', 'mass', 'k', 'mu_k', 'length'].includes(key)
+    ['radius', 'object_type', 'mass', 'k', 'mu_k', 'length', 'f_friction'].includes(key)
   );
   
   const derivedParams = displayParams.filter(([key]) => 
-    ['omega_final_verified', 'theta_total_verified', 'a_verified', 't_flight_verified', 'range_verified', 'max_height_verified', 'omega_verified', 'period_verified', 'amplitude_verified', 'x0_verified', 'I_verified', 'alpha_verified', 'tension_verified', 'f_normal_verified', 'f_friction_verified', 'distance_verified'].includes(key)
+    ['omega_final_verified', 'theta_total_verified', 'a_verified', 't_flight_verified', 'range_verified', 'max_height_verified', 'omega_verified', 'period_verified', 'amplitude_verified', 'x0_verified', 'I_verified', 'alpha_verified', 'tension_verified', 'distance_verified'].includes(key)
   );
 
   const otherParams = displayParams.filter(([key]) => 
-    !['theta0', 'omega0', 'alpha', 't_end', 'delta_theta', 'v0', 'x0', 'a', 'angle_deg', 'initial_height', 'period', 'omega', 'amplitude', 'damping', 'radius', 'object_type', 'mass', 'k', 'mu_k', 'length', 'omega_final_verified', 'theta_total_verified', 'a_verified', 't_flight_verified', 'range_verified', 'max_height_verified', 'omega_verified', 'period_verified', 'amplitude_verified', 'x0_verified', 'I_verified', 'alpha_verified', 'tension_verified', 'f_normal_verified', 'f_friction_verified', 'distance_verified'].includes(key)
+    !['theta0', 'omega0', 'alpha', 't_end', 'delta_theta', 'v0', 'x0', 'a', 'angle_deg', 'initial_height', 'period', 'omega', 'amplitude', 'damping', 'radius', 'object_type', 'mass', 'k', 'mu_k', 'length', 'f_friction', 'omega_final_verified', 'theta_total_verified', 'a_verified', 't_flight_verified', 'range_verified', 'max_height_verified', 'omega_verified', 'period_verified', 'amplitude_verified', 'x0_verified', 'I_verified', 'alpha_verified', 'tension_verified', 'distance_verified'].includes(key)
   );
 
   const formatKey = (key) => {
@@ -56,6 +56,7 @@ export default function ParametersDisplay() {
       k: 'k',
       mu_k: 'μₖ',
       length: 'L',
+      f_friction: 'f',
       omega_final_verified: 'ω (verified)',
       theta_total_verified: 'θ (verified)',
       a_verified: 'a (verified)',
@@ -69,8 +70,6 @@ export default function ParametersDisplay() {
       I_verified: 'I (verified)',
       alpha_verified: 'α (verified)',
       tension_verified: 'Tension (verified)',
-      f_normal_verified: 'N (verified)',
-      f_friction_verified: 'f (verified)',
       distance_verified: 'd (verified)',
     };
     return labels[key] || key;
@@ -118,6 +117,7 @@ export default function ParametersDisplay() {
       k: 'N/m',
       mu_k: '',
       length: 'm',
+      f_friction: 'N',
       omega_final_verified: 'rad/s',
       theta_total_verified: 'rad',
       a_verified: 'm/s²',
@@ -131,8 +131,6 @@ export default function ParametersDisplay() {
       I_verified: 'kg·m²',
       alpha_verified: 'rad/s²',
       tension_verified: 'N',
-      f_normal_verified: 'N',
-      f_friction_verified: 'N',
       distance_verified: 'm',
     };
     return units[key] || '';

@@ -5,8 +5,6 @@ import * as THREE from 'three';
 
 function InclinedPlaneContent({ timeSeries, currentFrame, parameters, bounds }) {
   const blockRef = useRef();
-  const normalVectorRef = useRef();
-  const frictionVectorRef = useRef();
   const gravityVectorRef = useRef();
 
   // Plane angle in radians
@@ -33,20 +31,6 @@ function InclinedPlaneContent({ timeSeries, currentFrame, parameters, bounds }) 
     return timeSeries.a[idx] || 0;
   }, [timeSeries, currentFrame]);
 
-  // Normal force
-  const normalForce = useMemo(() => {
-    if (!timeSeries?.f_normal) return 0;
-    const idx = Math.min(currentFrame, timeSeries.f_normal.length - 1);
-    return timeSeries.f_normal[idx] || 0;
-  }, [timeSeries, currentFrame]);
-
-  // Friction force
-  const frictionForce = useMemo(() => {
-    if (!timeSeries?.f_friction) return 0;
-    const idx = Math.min(currentFrame, timeSeries.f_friction.length - 1);
-    return timeSeries.f_friction[idx] || 0;
-  }, [timeSeries, currentFrame]);
-
   // Block position in 3D (along inclined plane)
   const blockPos = useMemo(() => {
     return new THREE.Vector3(
@@ -61,16 +45,6 @@ function InclinedPlaneContent({ timeSeries, currentFrame, parameters, bounds }) 
     if (blockRef.current) {
       blockRef.current.position.copy(blockPos);
       blockRef.current.rotation.z = -angle;
-    }
-    if (normalVectorRef.current && normalForce > 0.1) {
-      normalVectorRef.current.position.copy(blockPos);
-      normalVectorRef.current.rotation.z = -angle;
-      normalVectorRef.current.scale.y = Math.max(normalForce * 0.02, 0.1);
-    }
-    if (frictionVectorRef.current && frictionForce > 0.1) {
-      frictionVectorRef.current.position.copy(blockPos);
-      frictionVectorRef.current.rotation.z = -angle + Math.PI;
-      frictionVectorRef.current.scale.y = Math.max(frictionForce * 0.02, 0.1);
     }
     if (gravityVectorRef.current) {
       gravityVectorRef.current.position.copy(blockPos);
@@ -146,46 +120,6 @@ function InclinedPlaneContent({ timeSeries, currentFrame, parameters, bounds }) 
         <meshBasicMaterial color="#ef4444" />
       </mesh>
 
-      {/* Normal force vector (perpendicular to plane) */}
-      {normalForce > 0.1 && (
-        <group ref={normalVectorRef} position={blockPos} rotation={[0, 0, -angle]}>
-          <mesh
-            position={[0, normalForce * 0.01, 0]}
-            scale={[0.12, normalForce * 0.02, 0.12]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-          <mesh
-            position={[0, normalForce * 0.02 + 0.15, 0]}
-            scale={0.25}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-        </group>
-      )}
-
-      {/* Friction force vector (opposite to motion along plane) */}
-      {frictionForce > 0.1 && Math.abs(currentV) > 0.01 && (
-        <group ref={frictionVectorRef} position={blockPos} rotation={[0, 0, -angle + Math.PI]}>
-          <mesh
-            position={[0, frictionForce * 0.01, 0]}
-            scale={[0.12, frictionForce * 0.02, 0.12]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-          <mesh
-            position={[0, frictionForce * 0.02 + 0.15, 0]}
-            scale={0.25}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-        </group>
-      )}
-
       {/* Weight components (mg sinθ parallel, mg cosθ perpendicular) */}
       {parameters?.mass && (
         <>
@@ -195,20 +129,6 @@ function InclinedPlaneContent({ timeSeries, currentFrame, parameters, bounds }) 
           >
             mg = {(parameters.mass * 9.8).toFixed(1)} N
           </Html>
-          <Html
-            position={blockPos.clone().add(new THREE.Vector3(-1.5, -1.5, 0)).toArray()}
-            style={{ color: '#22c55e', fontSize: '12px', pointerEvents: 'none', fontWeight: '600' }}
-          >
-            N = {normalForce.toFixed(1)} N
-          </Html>
-          {frictionForce > 0.1 && (
-            <Html
-              position={blockPos.clone().add(new THREE.Vector3(1.5, 0, 0)).toArray()}
-              style={{ color: '#f97316', fontSize: '12px', pointerEvents: 'none', fontWeight: '600' }}
-            >
-              f = {frictionForce.toFixed(1)} N
-            </Html>
-          )}
         </>
       )}
 
@@ -230,48 +150,7 @@ function InclinedPlaneContent({ timeSeries, currentFrame, parameters, bounds }) 
         </Html>
       </group>
 
-      {/* Velocity & acceleration vectors along plane */}
-      {Math.abs(currentV) > 0.1 && (
-        <group position={blockPos} rotation={[0, 0, -angle]}>
-          <mesh
-            position={[Math.sign(currentV) * 0.7, 1.2, 0]}
-            scale={[0.12, Math.abs(currentV) * 0.08, 0.12]}
-            rotation={currentV >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#3b82f6" />
-          </mesh>
-          <mesh
-            position={[0, Math.abs(currentV) * 0.08 + 0.3, 0]}
-            scale={0.25}
-            rotation={currentV >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#3b82f6" />
-          </mesh>
-        </group>
-      )}
 
-      {Math.abs(currentA) > 0.01 && (
-        <group position={blockPos} rotation={[0, 0, -angle]}>
-          <mesh
-            position={[Math.sign(currentA) * 0.7, -1.2, 0]}
-            scale={[0.1, Math.abs(currentA) * 0.06, 0.1]}
-            rotation={currentA >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-          <mesh
-            position={[0, -(Math.abs(currentA) * 0.06 + 0.25), 0]}
-            scale={0.2}
-            rotation={currentA >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-        </group>
-      )}
     </>
   );
 }

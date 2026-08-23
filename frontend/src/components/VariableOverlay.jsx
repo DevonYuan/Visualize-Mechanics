@@ -29,8 +29,6 @@ export default function VariableOverlay() {
       if (currentData.x !== undefined) vars.push({ label: 'Distance', value: currentData.x, unit: 'm' });
       if (currentData.v !== undefined) vars.push({ label: 'Velocity', value: currentData.v, unit: 'm/s' });
       if (currentData.a !== undefined) vars.push({ label: 'Accel.', value: currentData.a, unit: 'm/s²' });
-      if (currentData.f_normal !== undefined) vars.push({ label: 'Normal', value: currentData.f_normal, unit: 'N' });
-      if (currentData.f_friction !== undefined) vars.push({ label: 'Friction', value: currentData.f_friction, unit: 'N' });
     } else {
       // Generic: show all available
       const allVars = [

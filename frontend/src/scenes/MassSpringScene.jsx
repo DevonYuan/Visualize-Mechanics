@@ -6,7 +6,6 @@ import * as THREE from 'three';
 function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
   const massRef = useRef();
   const springRef = useRef();
-  const velocityVectorRef = useRef();
   const supportRef = useRef();
 
   // Current displacement from equilibrium
@@ -37,7 +36,8 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
   // Spring parameters
   const equilibriumY = bounds.equilibriumY || 3;
   const springLength = bounds.springLength || 3;
-  const massY = useMemo(() => equilibriumY - springLength + currentX, [equilibriumY, springLength, currentX]);
+  const massY = useMemo(() => equilibriumY - springLength - currentX, [equilibriumY, springLength, currentX]);
+  const springStartY = equilibriumY; // Start from bottom of ceiling support (equilibriumY)
 
   // Spring geometry - helical spring using points
   const springPoints = useMemo(() => {
@@ -49,7 +49,7 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
 
     for (let i = 0; i <= totalSegments; i++) {
       const t = i / totalSegments;
-      const y = t * Math.max(0.1, springLength - currentX); // compressed/extended length
+      const y = springStartY - t * Math.max(0.1, springLength - currentX); // compressed/extended length, starting from springStartY
       const angle = t * coils * Math.PI * 2;
       points.push(new THREE.Vector3(
         Math.cos(angle) * radius,
@@ -58,7 +58,7 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
       ));
     }
     return points;
-  }, [currentX, springLength]);
+  }, [currentX, springLength, springStartY]);
 
   // Update positions each frame
   useFrame(() => {
@@ -69,14 +69,6 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
     if (springRef.current) {
       springRef.current.geometry.setFromPoints(springPoints);
       springRef.current.geometry.attributes.position.needsUpdate = true;
-    }
-
-    // Velocity vector
-    if (velocityVectorRef.current && Math.abs(currentV) > 0.1) {
-      velocityVectorRef.current.position.y = massY;
-      const scale = Math.max(Math.abs(currentV) * 0.15, 0.2);
-      velocityVectorRef.current.scale.y = scale;
-      velocityVectorRef.current.rotation.x = currentV >= 0 ? Math.PI : 0;
     }
   });
 
@@ -101,8 +93,8 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
           <boxGeometry />
           <meshStandardMaterial color="#374151" roughness={0.8} metalness={0.1} />
         </mesh>
-        {/* Spring attachment point */}
-        <mesh position={[0, -0.5, 0]} scale={[0.2, 0.2, 0.2]}>
+        {/* Spring attachment point - positioned at the bottom of the support */}
+        <mesh position={[0, -0.5, 0]} scale={[0.3, 0.1, 0.3]}>
           <cylinderGeometry args={[1, 1, 1, 16]} />
           <meshStandardMaterial color="#1f2937" />
         </mesh>
@@ -143,27 +135,7 @@ function MassSpringContent({ timeSeries, currentFrame, parameters, bounds }) {
         Equilibrium
       </Html>
 
-      {/* Velocity vector (vertical) */}
-      {Math.abs(currentV) > 0.1 && (
-        <group ref={velocityVectorRef} position={[0, massY, 1.5]}>
-          <mesh
-            position={[0, Math.abs(currentV) * 0.075, 0]}
-            scale={[0.15, Math.abs(currentV) * 0.15, 0.15]}
-            rotation={currentV >= 0 ? [Math.PI, 0, 0] : [0, 0, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-          <mesh
-            position={[0, Math.abs(currentV) * 0.15 + 0.2, 0]}
-            scale={0.25}
-            rotation={currentV >= 0 ? [Math.PI, 0, 0] : [0, 0, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-        </group>
-      )}
+
 
       </>
   );
@@ -185,7 +157,6 @@ function MassSpringScene({ timeSeries, currentTime, duration, parameters }) {
 
   // Compute current values for overlay
   const currentX = timeSeries?.x_eq?.[Math.min(frame, (timeSeries.x_eq?.length || 1) - 1)] ?? parameters?.x0 ?? 0;
-  const currentV = timeSeries?.v?.[Math.min(frame, (timeSeries.v?.length || 1) - 1)] ?? parameters?.v0 ?? 0;
   const k = parameters?.k ?? 1;
   const currentForce = -k * currentX;
 
@@ -202,7 +173,9 @@ function MassSpringScene({ timeSeries, currentTime, duration, parameters }) {
         camera={{ position: [0, 5, 12], fov: 45 }}
         shadows
         style={{ width: '100%', height: '100%' }}
+        gl={{ preserveDrawingBuffer: true, antialias: true }}
       >
+        <color attach="background" args={['#0f172a']} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 10, 7]} intensity={1} castShadow />
         <directionalLight position={[-5, 5, -7]} intensity={0.5} />
@@ -221,7 +194,7 @@ function MassSpringScene({ timeSeries, currentTime, duration, parameters }) {
       <div style={{
         position: 'absolute',
         top: '20px',
-        right: '20px',
+        left: '20px',
         zIndex: 10,
         background: 'rgba(17, 24, 39, 0.95)',
         padding: '16px',
@@ -247,7 +220,6 @@ function MassSpringScene({ timeSeries, currentTime, duration, parameters }) {
         <div style={{ borderTop: '1px solid #374151', marginTop: '10px', paddingTop: '10px' }}>
           <div style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current</div>
           <div style={{ color: '#f97316', fontWeight: '600' }}>F = {currentForce.toFixed(1)} N</div>
-          <div style={{ color: '#22c55e' }}>v = {currentV.toFixed(2)} m/s</div>
           <div style={{ color: '#fbbf24' }}>x = {currentX.toFixed(3)} m</div>
         </div>
       </div>

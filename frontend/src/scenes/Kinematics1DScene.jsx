@@ -124,34 +124,7 @@ function KinematicsContent({ timeSeries, currentFrame, bounds, inclineAngle = 0 
         />
       </mesh>
 
-      {/* Velocity vector arrow (along the incline) */}
-      {Math.abs(currentVelocity) > 0.1 && (
-        <group position={blockPos} rotation={[0, 0, blockRotation]}>
-          <mesh
-            position={[Math.sign(currentVelocity) * 0.7, 0.8, 0]}
-            scale={[0.12, Math.abs(currentVelocity) * 0.12, 0.12]}
-            rotation={currentVelocity >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-          <mesh
-            position={[0, Math.abs(currentVelocity) * 0.12 + 0.35, 0]}
-            scale={[0.25, 0.25, 0.25]}
-            rotation={currentVelocity >= 0 ? [0, 0, 0] : [0, Math.PI, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-          <Html
-            position={[Math.sign(currentVelocity) * 1.2, 1.2, 0]}
-            style={{ color: '#22c55e', fontSize: '10px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap' }}
-            center
-          >
-            v
-          </Html>
-        </group>
-      )}
+
 
       {/* Current values display */}
       <Html
