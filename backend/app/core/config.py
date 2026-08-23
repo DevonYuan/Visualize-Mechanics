@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     # NIM
     NIM_API_KEY: str = "test-key"
     NIM_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    NIM_VISION_MODEL: str = "meta/llama-3.2-90b-vision-instruct"
-    NIM_REASONING_MODEL: str = "meta/llama-3.1-8b-instruct"
+    NIM_VISION_MODEL: str = "nvidia/llama-3.1-nemotron-nano-vl-8b-v1"
+    NIM_REASONING_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b"
 
     # Server
     PORT: int = 8000

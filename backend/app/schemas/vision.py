@@ -19,3 +19,4 @@ class VisionOutput(BaseModel):
         "conceptual_mc",
         "unknown"
     ] = Field(..., description="Suggested scenario classification")
+    multiple_choice_options: list[str] | None = Field(None, description="Multiple choice options if present (e.g., ['A) 20π rad', 'B) 40π rad', 'C) 80π rad', 'D) 160π rad'])")

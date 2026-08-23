@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import RotationalKinematicsScene from '../scenes/RotationalKinematicsScene';
 
-function buildTimeSeries({ theta0, omega0, alpha, duration }) {
-  const n = Math.round(duration * 30);
+function buildTimeSeries({ omega0, alpha, theta0, t_end }) {
+  const n = Math.round(t_end * 30);
   const t = [];
   const theta = [];
   const omega = [];
+  const alphaArr = [];
 
   for (let i = 0; i <= n; i++) {
-    const time = (i / n) * duration;
+    const time = (i / n) * t_end;
+    const thetaVal = theta0 + omega0 * time + 0.5 * alpha * time * time;
+    const omegaVal = omega0 + alpha * time;
     t.push(time);
-    theta.push(theta0 + omega0 * time + 0.5 * alpha * time * time);
-    omega.push(omega0 + alpha * time);
+    theta.push(thetaVal);
+    omega.push(omegaVal);
+    alphaArr.push(alpha);
   }
 
-  return { t, theta, omega };
+  return { t, theta, omega, alpha: alphaArr };
 }
 
 export default function TestRotational() {
@@ -23,16 +27,15 @@ export default function TestRotational() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    // Default test scenario: wheel from rest with constant angular acceleration.
-    const theta0 = 0.0;
+    // Test Case: Wheel from rest, constant angular acceleration
+    // omega0 = 0, alpha = 2.0 rad/s², t = 5.0 s
+    // Expected: omega_final = 10 rad/s, theta = 25 rad
     const omega0 = 0.0;
     const alpha = 2.0;
-    const duration = 5.0;
-    const radius = 0.3;
-    const mass = 2.0;
-    const objectType = 'disk';
+    const theta0 = 0.0;
+    const t_end = 5.0;
 
-    const ts = buildTimeSeries({ theta0, omega0, alpha, duration });
+    const ts = buildTimeSeries({ omega0, alpha, theta0, t_end });
 
     setTestData({
       scenario: 'rotational_kinematics',
@@ -40,20 +43,28 @@ export default function TestRotational() {
         theta0,
         omega0,
         alpha,
-        t_end: duration,
-        radius,
-        mass,
-        object_type: objectType,
+        t_end,
+        radius: 0.3,
+        object_type: 'disk',
+        mass: 2.0,
       },
       animation_spec: {
-        duration_s: duration,
+        duration_s: t_end,
         fps: 30,
+      },
+      worked_solution: {
+        steps: [
+          { step: 1, description: 'Identify knowns: omega0 = 0 rad/s, alpha = 2.0 rad/s², t = 5.0 s', equation: null },
+          { step: 2, description: 'Calculate final angular velocity', equation: 'omega = omega0 + alpha * t' },
+          { step: 3, description: 'Calculate total angle turned', equation: 'theta = theta0 + omega0 * t + 0.5 * alpha * t²' }
+        ],
+        final_answer: { omega: '10.0 rad/s', theta: '25.0 rad' }
       },
       time_series: {
         t: ts.t,
         theta: ts.theta,
         omega: ts.omega,
-        alpha: Array(ts.t.length).fill(alpha),
+        alpha: ts.alpha,
       },
     });
   }, []);
@@ -61,7 +72,7 @@ export default function TestRotational() {
   useEffect(() => {
     let interval;
     if (isPlaying && testData) {
-      const duration = testData.animation_spec?.duration_s || 3.0;
+      const duration = testData.animation_spec?.duration_s || 5.0;
       interval = setInterval(() => {
         setCurrentTime(prev => {
           if (prev >= duration) {
@@ -74,18 +85,6 @@ export default function TestRotational() {
     }
     return () => clearInterval(interval);
   }, [isPlaying, testData]);
-
-  const displayCurrent = useMemo(() => {
-    if (!testData?.time_series) return { theta: 0, omega: 0 };
-    const idx = Math.min(
-      Math.floor(currentTime * (testData.animation_spec?.fps || 30)),
-      testData.time_series.t.length - 1
-    );
-    return {
-      theta: testData.time_series.theta[idx] ?? 0,
-      omega: testData.time_series.omega[idx] ?? 0,
-    };
-  }, [testData, currentTime]);
 
   if (!testData) {
     return <div style={{ padding: '20px', color: 'white' }}>Loading test data...</div>;
@@ -106,13 +105,11 @@ export default function TestRotational() {
       }}>
         <h3>Test Rotational Kinematics</h3>
         <p>Scenario: {testData.scenario}</p>
-        <p>α: {testData.parameters.alpha.toFixed(1)} rad/s²</p>
-        <p>ω₀: {testData.parameters.omega0.toFixed(1)} rad/s</p>
-        <p>Object: {testData.parameters.object_type} (r = {testData.parameters.radius.toFixed(1)} m)</p>
-        <p>Duration: {testData.animation_spec.duration_s.toFixed(1)}s</p>
+        <p>ω₀ = {testData.parameters.omega0} rad/s</p>
+        <p>α = {testData.parameters.alpha} rad/s²</p>
+        <p>t = {testData.parameters.t_end} s</p>
+        <p>Object: {testData.parameters.object_type} (r = {testData.parameters.radius} m)</p>
         <p>Current Time: {currentTime.toFixed(2)}s</p>
-        <p>θ: {displayCurrent.theta.toFixed(2)} rad ({(displayCurrent.theta * 180 / Math.PI).toFixed(1)}°)</p>
-        <p>ω: {displayCurrent.omega.toFixed(2)} rad/s</p>
         <button
           onClick={() => setIsPlaying(!isPlaying)}
           style={{
@@ -123,7 +120,7 @@ export default function TestRotational() {
             borderRadius: '4px',
             cursor: 'pointer',
             marginRight: '8px',
-            marginTop: '8px'
+            fontWeight: 'bold'
           }}
         >
           {isPlaying ? 'Pause' : 'Play'}
@@ -132,12 +129,12 @@ export default function TestRotational() {
           onClick={() => setCurrentTime(0)}
           style={{
             padding: '8px 16px',
-            background: '#6b7280',
+            background: '#3b82f6',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
-            marginTop: '8px'
+            fontWeight: 'bold'
           }}
         >
           Reset
@@ -147,7 +144,7 @@ export default function TestRotational() {
       <RotationalKinematicsScene
         timeSeries={testData.time_series}
         currentTime={currentTime}
-        duration={testData.animation_spec.duration_s}
+        duration={testData.animation_spec?.duration_s}
         parameters={testData.parameters}
       />
     </div>

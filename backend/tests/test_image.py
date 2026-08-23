@@ -14,20 +14,21 @@ def create_test_image(format: str = "PNG", size: tuple = (200, 200), mode: str =
 
 
 class TestPreprocessImage:
-    def test_png_to_jpeg_conversion(self):
+    def test_small_png_preserved(self):
         png_b64 = create_test_image(format="PNG", size=(100, 100))
         result = preprocess_image(png_b64)
-        # Should be valid base64
         decoded = base64.b64decode(result)
         img = Image.open(BytesIO(decoded))
-        assert img.format == "JPEG"
-        assert img.mode == "RGB"
+        # Small images should preserve PNG format to avoid text degradation
+        assert img.format == "PNG"
 
-    def test_rgba_conversion(self):
+    def test_small_rgba_preserved_as_png(self):
         rgba_b64 = create_test_image(format="PNG", size=(100, 100), mode="RGBA")
         result = preprocess_image(rgba_b64)
         decoded = base64.b64decode(result)
         img = Image.open(BytesIO(decoded))
+        # Small RGBA images converted to RGB PNG
+        assert img.format == "PNG"
         assert img.mode == "RGB"
 
     def test_resize_large_image(self):

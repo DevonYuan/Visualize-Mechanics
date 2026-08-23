@@ -4,7 +4,8 @@ Extract physics problem from image and return ONLY this JSON structure:
   "knowns": {"variable": "value with units"},
   "unknowns": ["variable"],
   "diagram_description": "string",
-  "suggested_scenario": "kinematics_1d|inclined_plane|projectile_motion|atwood_machine|collision_1d|rotational_kinematics|mass_spring"
+  "suggested_scenario": "kinematics_1d|inclined_plane|projectile_motion|atwood_machine|collision_1d|rotational_kinematics|mass_spring|energy_conservation|conceptual_mc",
+  "multiple_choice_options": ["A) option text", "B) option text", "C) option text", "D) option text"]  // optional, only if present in image
 }
 
 CRITICAL - ANGLE EXTRACTION FROM DIAGRAMS:
@@ -31,6 +32,14 @@ SCENARIO CLASSIFICATION RULE (HIGHEST PRIORITY):
 → knowns: include any given values
 → unknowns: the conceptual question being asked
 → diagram_description: describe the diagram if relevant
+→ **multiple_choice_options: extract the exact options as listed (e.g., ["A) 20π rad", "B) 40π rad", "C) 80π rad", "D) 160π rad"])**
+
+**IMPORTANT: NUMERICAL MC QUESTIONS (NOT conceptual_mc):**
+- If question has multiple choice options BUT asks for a NUMERICAL value (e.g., "What is the angular displacement? A) 20π rad B) 40π rad C) 80π rad D) 160π rad")
+- These are NOT "conceptual_mc" - they are standard physics problems with MC answer format
+→ Classify by PHYSICS METHOD (e.g., rotational_kinematics, projectile_motion, etc.)
+→ **EXTRACT multiple_choice_options for the reasoning model to verify against**
+→ The reasoning model MUST compute the numerical answer AND match it to the correct option
 
 **MASS-SPRING DETECTION RULES:**
 - If problem mentions "mass on a spring", "spring constant k", "oscillat", "SHM", "simple harmonic"
@@ -61,10 +70,14 @@ Scenario types:
 - conceptual_mc: Multiple choice conceptual question (which expression/formula/graph)
 
 EXTRACTION RULES:
-- "initially at rest" or "starts from rest" → v0 = 0 m/s
+- "initially at rest" or "starts from rest" → v0 = 0 m/s (for linear) OR omega0 = 0 rad/s (for rotational)
 - "covers a distance of X m" → distance = X m (or d = X m)
 - "in Y s" or "time of Y s" → time = Y s (or t = Y s)
 - "mass m" or "mass of m kg" → mass = m (use numeric value if given, otherwise "m")
+- **CRITICAL - ROTATIONAL UNITS: "After X s, it makes Y revolutions per second" or "reaches Y rev/s" or "angular speed is Y rev/s" → omega_final = "Y rev/s" (NOT angular_acceleration!)**
+- **CRITICAL: "angular acceleration" or "angular acceleration of X rad/s²" → alpha = "X rad/s^2"**
+- **CRITICAL: "rpm" or "rev/min" → convert to rad/s in knowns value (e.g., "300 rpm" → "omega": "31.42 rad/s") but KEEP original key if ambiguous**
+- **SPECIAL CASE: If problem text says "with uniform angular acceleration" AND THEN "After X s, it makes Y rev/s" → The "Y rev/s" is the FINAL ANGULAR VELOCITY (omega_final), NOT the angular acceleration. The angular acceleration is UNKNOWN and must be computed.**
 - Include ALL numeric values with units in knowns
 - Unknowns should be the variable NAME only (e.g., "a" for acceleration, "v" for speed)
 
@@ -114,6 +127,18 @@ Example 9: "A disk of radius 0.3 m and mass 2 kg experiences a torque of 4.0 N·
 → knowns: {"mass": "2 kg", "radius": "0.3 m", "torque": "4.0 N-m"}
 → unknowns: ["alpha"]
 → diagram_description: "Disk with radius labeled 0.3 m, torque arrow about center"
+
+Example 10: "A wheel rotates from rest with uniform angular acceleration. After 16 s, it makes 5 revolutions per second. What is the angular displacement?"
+→ suggested_scenario: "rotational_kinematics"
+→ knowns: {"omega0": "0 rad/s", "omega_final": "5 rev/s", "time": "16 s"}
+→ unknowns: ["angular_displacement", "alpha"]
+→ diagram_description: "Wheel rotating from rest about its center axis"
+
+Example 11: "A flywheel starts from rest and accelerates uniformly. After 10 s, it is rotating at 20 rev/s. Find the angular acceleration and total revolutions."
+→ suggested_scenario: "rotational_kinematics"
+→ knowns: {"omega0": "0 rad/s", "omega_final": "20 rev/s", "time": "10 s"}
+→ unknowns: ["alpha", "delta_theta"]
+→ diagram_description: "Flywheel accelerating from rest"
 
 Output STRICT JSON ONLY. No markdown, no explanations, no conversational text, no "Answer:" prefix, no "The problem text is", no "**Known Variables**", no bullet points, no headings. Do not wrap in code fences. Start immediately with { and end with }. Your entire response must be valid JSON and nothing else. Do not include any text before or after the JSON.
 

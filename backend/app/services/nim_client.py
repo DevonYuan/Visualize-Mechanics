@@ -46,7 +46,7 @@ class NIMClient:
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:{media_type};base64,{image_b64}",
-                                "detail": "high",
+                                "detail": "auto",
                             },
                         },
                     ],
@@ -91,6 +91,9 @@ class NIMClient:
                 # Rotational unit conversions (keep original key as-is too).
                 if "rpm" in raw:
                     knowns["omega0"] = num * 2 * math.pi / 60  # rpm -> rad/s
+                elif "/s" in raw and any(u in raw for u in ("rev", "revolution", "turn")):
+                    # rev/s, revolutions/s, turns/s -> rad/s (angular velocity)
+                    knowns[key] = num * 2 * math.pi
                 elif any(u in raw for u in ("revolution", "rev", "turn")):
                     knowns["delta_theta"] = num * 2 * math.pi  # revolutions -> rad
                 elif key in ("theta", "angle", "delta_theta") and "deg" in raw:
@@ -262,8 +265,10 @@ class NIMClient:
                 if tau and I:
                     alpha_correct = Calculator.evaluate("tau / I", {"tau": tau, "I": I})
                     params["alpha_verified"] = alpha_correct
-                    if params.get("alpha") is None:
-                        params["alpha"] = alpha_correct  # fallback for time-series generation
+                    # Always use verified alpha for time-series generation (override model's value)
+                    params["alpha"] = alpha_correct
+                    # Also store the correct I
+                    params["I"] = I
 
                 # --- Kinematics verification ---
                 omega0 = _first(known_values.get("omega0"), params.get("omega0"))
@@ -898,12 +903,15 @@ class NIMClient:
     async def reasoning_solve(self, vision_output: VisionOutput) -> ReasoningOutput:
         """Call NIM reasoning model to solve the physics problem with calculator tool."""
         # Build context from vision output
+        mc_options = ""
+        if vision_output.multiple_choice_options:
+            mc_options = f"\nMultiple Choice Options: {vision_output.multiple_choice_options}"
         problem_context = f"""
 Problem Text: {vision_output.problem_text}
 Knowns: {vision_output.knowns}
 Unknowns: {vision_output.unknowns}
 Diagram: {vision_output.diagram_description}
-Suggested Scenario: {vision_output.suggested_scenario}
+Suggested Scenario: {vision_output.suggested_scenario}{mc_options}
 """
 
         # Extract known numeric values for calculator variables
@@ -912,7 +920,7 @@ Suggested Scenario: {vision_output.suggested_scenario}
         # Build system prompt with formulas reference
         system_prompt = f"{REASONING_PROMPT}\n\n--- FORMULAS REFERENCE ---\n{FORMULAS_REFERENCE}"
 
-        max_iterations = 5  # Prevent infinite loops
+        max_iterations = 25  # Increased: model needs many calculator calls for time series key frames (5 frames * 3 values + physics calcs)
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Solve this physics problem:\n{problem_context}"},
@@ -994,9 +1002,13 @@ Suggested Scenario: {vision_output.suggested_scenario}
                     args = json.loads(tool_call.function.arguments)
                     expression = args.get("expression", "")
                     variables = args.get("variables", {})
-                    # Merge with known values from vision
-                    merged_vars = {**known_values, **variables}
-                    result = Calculator.evaluate(expression, merged_vars)
+                    # Merge with known values from vision - known_values take precedence so converted units are used
+                    merged_vars = {**variables, **known_values}
+                    try:
+                        result = Calculator.evaluate(expression, merged_vars)
+                    except Exception as e:
+                        # Return error to model so it can learn
+                        result = {"error": str(e)}
 
                     messages.append({
                         "role": "tool",
