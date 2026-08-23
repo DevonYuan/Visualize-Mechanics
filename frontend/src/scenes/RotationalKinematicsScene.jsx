@@ -5,7 +5,7 @@ import * as THREE from 'three';
 
 function RotationalKinematicsContent({ timeSeries, currentFrame, parameters }) {
   const rotatingObjectRef = useRef();
-  const angleMarkerRef = useRef();
+  const rotationArrowRef = useRef();
 
   // Current angular values
   const currentTheta = useMemo(() => {
@@ -61,9 +61,10 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters }) {
       rotatingObjectRef.current.rotation.z = currentTheta;
     }
 
-    // Current angle arc
-    if (angleMarkerRef.current) {
-      angleMarkerRef.current.rotation.z = currentTheta;
+    // Sweep the direction-of-rotation arrow around the wheel face so it
+    // visually signals the spin
+    if (rotationArrowRef.current) {
+      rotationArrowRef.current.rotation.z = currentTheta;
     }
   });
 
@@ -97,21 +98,14 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters }) {
         );
       case 'sphere':
         return (
-          <group>
-            <mesh castShadow receiveShadow>
-              <sphereGeometry args={[radius, 24, 24]} />
-              <meshStandardMaterial
-                color="#22c55e"
-                roughness={0.3}
-                metalness={0.1}
-              />
-            </mesh>
-            {/* Rotation indicator */}
-            <mesh position={[radius * 0.7, 0, 0]} scale={0.15}>
-              <coneGeometry args={[1, 1, 8]} />
-              <meshBasicMaterial color="#ef4444" />
-            </mesh>
-          </group>
+          <mesh castShadow receiveShadow>
+            <sphereGeometry args={[radius, 24, 24]} />
+            <meshStandardMaterial
+              color="#22c55e"
+              roughness={0.3}
+              metalness={0.1}
+            />
+          </mesh>
         );
       default: // 'disk'
         return (
@@ -121,11 +115,6 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters }) {
             <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]}>
               <cylinderGeometry args={[radius, radius, 0.4, 32]} />
               <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.1} />
-            </mesh>
-            {/* Radial marker to visualize rotation */}
-            <mesh position={[radius * 0.7, 0, 0.22]} scale={0.1}>
-              <coneGeometry args={[1, 1, 8]} />
-              <meshBasicMaterial color="#ef4444" />
             </mesh>
           </group>
         );
@@ -159,31 +148,18 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters }) {
         material={new THREE.LineBasicMaterial({ color: '#a1a1aa', transparent: true, opacity: 0.8 })}
       />
 
-      {/* Direction of rotation: circular arrow around the wheel face */}
-      <line geometry={rotationArcGeo}>
-        <lineBasicMaterial color="#38bdf8" toneMapped={false} />
-      </line>
-      <group position={[rotationArrowEnd.x, rotationArrowEnd.y, 0.25]} rotation={[0, 0, rotationArrowEnd.rotZ]}>
-        <mesh position={[0, -0.06, 0]}>
-          <coneGeometry args={[0.12, 0.4, 12]} />
-          <meshBasicMaterial color="#38bdf8" />
-        </mesh>
-      </group>
-
-      {/* Current angle arc */}
-      <group ref={angleMarkerRef}>
-        <line
-          geometry={new THREE.BufferGeometry().setFromPoints(
-            Array.from({ length: 33 }, (_, i) =>
-              new THREE.Vector3(
-                Math.cos((i / 32) * currentTheta) * (radius + 1),
-                Math.sin((i / 32) * currentTheta) * (radius + 1),
-                0
-              )
-            )
-          )}
-          material={new THREE.LineBasicMaterial({ color: '#f97316', linewidth: 3 })}
-        />
+      {/* Direction of rotation: circular arrow around the wheel face that
+          sweeps around with the spin */}
+      <group ref={rotationArrowRef}>
+        <line geometry={rotationArcGeo}>
+          <lineBasicMaterial color="#38bdf8" toneMapped={false} />
+        </line>
+        <group position={[rotationArrowEnd.x, rotationArrowEnd.y, 0.25]} rotation={[0, 0, rotationArrowEnd.rotZ]}>
+          <mesh position={[0, -0.06, 0]}>
+            <coneGeometry args={[0.12, 0.4, 12]} />
+            <meshBasicMaterial color="#38bdf8" />
+          </mesh>
+        </group>
       </group>
     </>
   );
