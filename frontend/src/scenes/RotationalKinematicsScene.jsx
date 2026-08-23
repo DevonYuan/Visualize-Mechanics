@@ -1,12 +1,10 @@
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, OrbitControls, Grid } from '@react-three/drei';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Grid } from '@react-three/drei';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
-function RotationalKinematicsContent({ timeSeries, currentFrame, parameters, bounds }) {
+function RotationalKinematicsContent({ timeSeries, currentFrame, parameters }) {
   const rotatingObjectRef = useRef();
-  const omegaVectorRef = useRef();
-  const alphaVectorRef = useRef();
   const angleMarkerRef = useRef();
 
   // Current angular values
@@ -22,50 +20,54 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters, bou
     return timeSeries.omega[idx] ?? (parameters?.omega0 || 0);
   }, [timeSeries, currentFrame, parameters]);
 
-  const currentAlpha = useMemo(() => {
-    if (!timeSeries?.alpha) return parameters?.alpha || 0;
-    const idx = Math.min(currentFrame, timeSeries.alpha.length - 1);
-    return timeSeries.alpha[idx] ?? (parameters?.alpha || 0);
-  }, [timeSeries, currentFrame, parameters]);
-
-  const currentTime = useMemo(() => {
-    if (!timeSeries?.t) return 0;
-    const idx = Math.min(currentFrame, timeSeries.t.length - 1);
-    return timeSeries.t[idx] ?? 0;
-  }, [timeSeries, currentFrame]);
-
   // Object dimensions
   const radius = parameters?.radius || 1;
   const objectType = parameters?.object_type || 'disk'; // 'disk', 'rod', 'hoop', 'sphere'
 
-  // Update rotation
+  // Direction-of-rotation circular arrow (static arc around the wheel face).
+  // Pointed along the current spin direction: CCW (as seen from +z) when
+  // omega is positive, CW when negative.
+  const rotationSign = currentOmega >= 0 ? 1 : -1;
+  const rotationArcGeo = useMemo(() => {
+    const ringR = radius + 0.45;
+    const span = 2 * Math.PI - 1.0; // leave a gap so the arrowhead reads cleanly
+    const steps = 48;
+    const pts = [];
+    for (let i = 0; i <= steps; i++) {
+      const a =
+        rotationSign > 0
+          ? 0.5 + (i / steps) * span
+          : 2 * Math.PI - 0.5 - (i / steps) * span;
+      pts.push(new THREE.Vector3(Math.cos(a) * ringR, Math.sin(a) * ringR, 0.25));
+    }
+    return new THREE.BufferGeometry().setFromPoints(pts);
+  }, [radius, rotationSign]);
+
+  const rotationArrowEnd = useMemo(() => {
+    const ringR = radius + 0.45;
+    const a = rotationSign > 0 ? 2 * Math.PI - 0.5 : 0.5;
+    const tx = rotationSign > 0 ? -Math.sin(a) : Math.sin(a);
+    const ty = rotationSign > 0 ? Math.cos(a) : -Math.cos(a);
+    return {
+      x: Math.cos(a) * ringR,
+      y: Math.sin(a) * ringR,
+      rotZ: Math.atan2(ty, tx) - Math.PI / 2,
+    };
+  }, [radius, rotationSign]);
+
+  // Update rotation each frame
   useFrame(() => {
     if (rotatingObjectRef.current) {
       rotatingObjectRef.current.rotation.z = currentTheta;
     }
 
-    // Angular velocity vector (along z-axis, comes out of screen for positive)
-    if (omegaVectorRef.current && Math.abs(currentOmega) > 0.1) {
-      const scale = Math.max(Math.abs(currentOmega) * 0.3, 0.3);
-      omegaVectorRef.current.scale.z = scale;
-      // Arrow direction depends on sign of omega (right-hand rule)
-      omegaVectorRef.current.rotation.x = currentOmega >= 0 ? 0 : Math.PI;
-    }
-
-    // Angular acceleration vector
-    if (alphaVectorRef.current && Math.abs(currentAlpha) > 0.01) {
-      const scale = Math.max(Math.abs(currentAlpha) * 0.25, 0.2);
-      alphaVectorRef.current.scale.z = scale;
-      alphaVectorRef.current.rotation.x = currentAlpha >= 0 ? 0 : Math.PI;
-    }
-
-    // Angle marker (shows current angle from reference)
+    // Current angle arc
     if (angleMarkerRef.current) {
       angleMarkerRef.current.rotation.z = currentTheta;
     }
   });
 
-  // Create rotating object based on type
+  // Rotating object geometry based on type
   const RotatingObject = () => {
     switch (objectType) {
       case 'rod':
@@ -75,12 +77,12 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters, bou
               <cylinderGeometry args={[0.1, 0.1, radius * 2, 16]} />
               <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.1} />
             </mesh>
-            {/* End markers */}
-            <mesh position={[0, 0, radius]} castShadow receiveShadow>
+            {/* End markers to visualize rotation */}
+            <mesh position={[0, 0, radius]} castShadow>
               <sphereGeometry args={[0.25, 12, 12]} />
               <meshStandardMaterial color="#ef4444" />
             </mesh>
-            <mesh position={[0, 0, -radius]} castShadow receiveShadow>
+            <mesh position={[0, 0, -radius]} castShadow>
               <sphereGeometry args={[0.25, 12, 12]} />
               <meshStandardMaterial color="#22c55e" />
             </mesh>
@@ -114,36 +116,21 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters, bou
       default: // 'disk'
         return (
           <group>
-            <mesh castShadow receiveShadow>
+            {/* Cylinder axis aligned with the rotation axis (z) so the wheel
+                spins about its own axis like a flywheel */}
+            <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]}>
               <cylinderGeometry args={[radius, radius, 0.4, 32]} />
               <meshStandardMaterial color="#3b82f6" roughness={0.3} metalness={0.1} />
             </mesh>
-            {/* Radial marker to see rotation */}
+            {/* Radial marker to visualize rotation */}
             <mesh position={[radius * 0.7, 0, 0.22]} scale={0.1}>
               <coneGeometry args={[1, 1, 8]} />
               <meshBasicMaterial color="#ef4444" />
-            </mesh>
-            {/* Center axle */}
-            <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]} scale={0.15}>
-              <cylinderGeometry args={[1, 1, 0.6, 16]} />
-              <meshStandardMaterial color="#1f2937" />
             </mesh>
           </group>
         );
     }
   };
-
-  // Moment of inertia for display
-  const momentOfInertia = useMemo(() => {
-    const m = parameters?.mass || 1;
-    const r = radius;
-    switch (objectType) {
-      case 'rod': return (1/12) * m * (2*r) * (2*r); // about center
-      case 'hoop': return m * r * r;
-      case 'sphere': return 0.4 * m * r * r;
-      default: return 0.5 * m * r * r; // disk
-    }
-  }, [parameters, radius, objectType]);
 
   return (
     <>
@@ -158,82 +145,32 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters, bou
         followCamera={false}
       />
 
-      {/* Support stand */}
-      <group>
-        <mesh position={[0, -1, 0]} scale={[1, 2, 1]}>
-          <boxGeometry />
-          <meshStandardMaterial color="#374151" roughness={0.8} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, 0, 0]} scale={[0.15, 0.1, 0.15]}>
-          <cylinderGeometry args={[1, 1, 1, 16]} />
-          <meshStandardMaterial color="#1f2937" />
-        </mesh>
-        {/* Horizontal arm holding object */}
-        <mesh position={[-radius - 1.5, 0.5, 0]} rotation={[0, 0, Math.PI / 2]} scale={[0.1, 0.1, radius + 1.5]}>
-          <cylinderGeometry args={[1, 1, 1, 16]} />
-          <meshStandardMaterial color="#4b5563" />
-        </mesh>
-      </group>
-
       {/* Rotating object */}
       <group ref={rotatingObjectRef} position={[0, 0, 0]}>
         <RotatingObject />
       </group>
 
-      {/* Angular velocity vector (pseudo-vector along axis) */}
-      {Math.abs(currentOmega) > 0.1 && (
-        <group ref={omegaVectorRef} position={[0, 0, 0]}>
-          <mesh
-            position={[0, 0, Math.sign(currentOmega) * 0.2]}
-            scale={[0.12, 0.12, Math.abs(currentOmega) * 0.25]}
-            rotation={currentOmega >= 0 ? [Math.PI / 2, 0, 0] : [-Math.PI / 2, 0, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-          <mesh
-            position={[0, 0, Math.sign(currentOmega) * (Math.abs(currentOmega) * 0.25 + 0.15)]}
-            scale={0.3}
-            rotation={currentOmega >= 0 ? [Math.PI / 2, 0, 0] : [-Math.PI / 2, 0, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#22c55e" />
-          </mesh>
-        </group>
-      )}
-
-      {/* Angular acceleration vector */}
-      {Math.abs(currentAlpha) > 0.01 && (
-        <group ref={alphaVectorRef} position={[0, 0, 0]}>
-          <mesh
-            position={[0, 0, Math.sign(currentAlpha) * 0.2]}
-            scale={[0.1, 0.1, (Math.abs(currentAlpha) * 0.2)]}
-            rotation={currentAlpha >= 0 ? [Math.PI / 2, 0, 0] : [-Math.PI / 2, 0, 0]}
-          >
-            <cylinderGeometry args={[1, 1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-          <mesh
-            position={[0, 0, Math.sign(currentAlpha) * (Math.abs(currentAlpha) * 0.2 + 0.1)]}
-            scale={0.25}
-            rotation={currentAlpha >= 0 ? [Math.PI / 2, 0, 0] : [-Math.PI / 2, 0, 0]}
-          >
-            <coneGeometry args={[1, 1, 8]} />
-            <meshBasicMaterial color="#f97316" />
-          </mesh>
-        </group>
-      )}
-
-      {/* Angle reference line (at theta = 0) */}
+      {/* Axis of rotation (line straight through the wheel centre, along z) */}
       <line
         geometry={new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(radius + 1.5, 0, 0),
+          new THREE.Vector3(0, 0, -(radius + 1.2)),
+          new THREE.Vector3(0, 0, radius + 1.2),
         ])}
-        material={new THREE.LineBasicMaterial({ color: '#6b7280', linewidth: 1, transparent: true, opacity: 0.5 })}
+        material={new THREE.LineBasicMaterial({ color: '#a1a1aa', transparent: true, opacity: 0.8 })}
       />
 
-      {/* Current angle arc indicator */}
+      {/* Direction of rotation: circular arrow around the wheel face */}
+      <line geometry={rotationArcGeo}>
+        <lineBasicMaterial color="#38bdf8" toneMapped={false} />
+      </line>
+      <group position={[rotationArrowEnd.x, rotationArrowEnd.y, 0.25]} rotation={[0, 0, rotationArrowEnd.rotZ]}>
+        <mesh position={[0, -0.06, 0]}>
+          <coneGeometry args={[0.12, 0.4, 12]} />
+          <meshBasicMaterial color="#38bdf8" />
+        </mesh>
+      </group>
+
+      {/* Current angle arc */}
       <group ref={angleMarkerRef}>
         <line
           geometry={new THREE.BufferGeometry().setFromPoints(
@@ -247,92 +184,7 @@ function RotationalKinematicsContent({ timeSeries, currentFrame, parameters, bou
           )}
           material={new THREE.LineBasicMaterial({ color: '#f97316', linewidth: 3 })}
         />
-        <Html
-          position={[
-            Math.cos(currentTheta / 2) * (radius + 1.5),
-            Math.sin(currentTheta / 2) * (radius + 1.5),
-            0
-          ]}
-          style={{ color: '#f97316', fontSize: '14px', pointerEvents: 'none', fontWeight: '600', transform: 'translate(-50%, -50%)' }}
-          center
-        >
-          θ = {(currentTheta * 180 / Math.PI).toFixed(1)}°
-        </Html>
       </group>
-
-      {/* Velocity/acceleration values display */}
-      <group position={[radius + 3, 0, 0]}>
-        <Html
-          position={[0, 1.5, 0]}
-          style={{ color: '#22c55e', fontSize: '16px', pointerEvents: 'none', fontWeight: '600' }}
-        >
-          ω = {currentOmega.toFixed(2)} rad/s
-        </Html>
-        <Html
-          position={[0, 0.5, 0]}
-          style={{ color: '#f97316', fontSize: '16px', pointerEvents: 'none', fontWeight: '600' }}
-        >
-          α = {currentAlpha.toFixed(2)} rad/s²
-        </Html>
-        <Html
-          position={[0, -0.5, 0]}
-          style={{ color: '#3b82f6', fontSize: '16px', pointerEvents: 'none', fontWeight: '600' }}
-        >
-          t = {currentTime.toFixed(2)} s
-        </Html>
-      </group>
-
-      {/* Legend */}
-      <Html
-        position={[-4.5, -1.5, -3]}
-        style={{ color: '#9ca3af', fontSize: '12px', pointerEvents: 'none', lineHeight: '1.8' }}
-      >
-        <div style={{ color: '#3b82f6', fontWeight: '600' }}>Rotational Kinematics</div>
-        <div>Object: {objectType} (r = {radius.toFixed(2)} m)</div>
-        <div>I = {momentOfInertia.toFixed(3)} kg·m²</div>
-        <div style={{ color: '#22c55e' }}>▲ ω (angular velocity) - green</div>
-        <div style={{ color: '#f97316' }}>▲ α (angular accel) - orange</div>
-        <div style={{ color: '#f97316' }}>⌒ θ = {(currentTheta * 180 / Math.PI).toFixed(1)}°</div>
-      </Html>
-
-      {/* Parameter info panel */}
-      <Html
-        position={[3.5, -1.5, -3]}
-        style={{ color: '#9ca3af', fontSize: '12px', pointerEvents: 'none', lineHeight: '1.8' }}
-      >
-        <div style={{ color: '#3b82f6', fontWeight: '600' }}>Parameters</div>
-        <div>ω₀ = {parameters?.omega0?.toFixed(2) || '?'} rad/s</div>
-        <div>α = {parameters?.alpha?.toFixed(2) || '?'} rad/s²</div>
-        <div>Duration: {parameters?.t_end?.toFixed(2) || bounds.duration?.toFixed(2) || '?'} s</div>
-        {parameters?.torque && <div>τ = {parameters.torque.toFixed(2)} N·m</div>}
-        {parameters?.mass && <div>m = {parameters.mass.toFixed(2)} kg</div>}
-      </Html>
-    </>
-  );
-}
-
-function RotationalKinematicsInner({ timeSeries, currentFrame, parameters, bounds }) {
-  return (
-    <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
-      <directionalLight position={[-5, 10, -5]} intensity={0.3} />
-
-      <OrbitControls
-        enablePan={true}
-        enableZoom={true}
-        enableRotate={true}
-        minZoom={0.5}
-        maxZoom={5}
-        target={[0, 0, 0]}
-      />
-
-      <RotationalKinematicsContent
-        timeSeries={timeSeries}
-        currentFrame={currentFrame}
-        parameters={parameters}
-        bounds={bounds}
-      />
     </>
   );
 }
@@ -355,20 +207,103 @@ export default function RotationalKinematicsScene({ timeSeries, currentTime, dur
     };
   }, [parameters, duration]);
 
+  // Live values for the side overlay
+  const currentTheta = timeSeries?.theta?.[Math.min(frameIndex, (timeSeries.theta?.length || 1) - 1)] ?? parameters?.theta0 ?? 0;
+  const currentOmega = timeSeries?.omega?.[Math.min(frameIndex, (timeSeries.omega?.length || 1) - 1)] ?? parameters?.omega0 ?? 0;
+  const currentAlpha = timeSeries?.alpha?.[Math.min(frameIndex, (timeSeries.alpha?.length || 1) - 1)] ?? parameters?.alpha ?? 0;
+  const currentT = timeSeries?.t?.[Math.min(frameIndex, (timeSeries.t?.length || 1) - 1)] ?? currentTime;
+
+  const radius = parameters?.radius || 1;
+  const objectType = parameters?.object_type || 'disk';
+  const mass = parameters?.mass;
+
+  // Moment of inertia for display
+  const momentOfInertia = useMemo(() => {
+    const m = parameters?.mass || 1;
+    switch (objectType) {
+      case 'rod': return (1 / 12) * m * (2 * radius) * (2 * radius); // about center
+      case 'hoop': return m * radius * radius;
+      case 'sphere': return 0.4 * m * radius * radius;
+      default: return 0.5 * m * radius * radius; // disk
+    }
+  }, [parameters, objectType, radius]);
+
+  // Maximum angular speed reached over the animation
+  const omegaMax = useMemo(() => {
+    const w0 = parameters?.omega0 ?? 0;
+    const a = parameters?.alpha ?? 0;
+    const tEnd = bounds.duration || 0;
+    return Math.abs(w0 + a * tEnd);
+  }, [parameters, bounds.duration]);
+
+  const omega0Value = (parameters?.omega0 ?? 0).toFixed(2);
+  const alphaValue = (parameters?.alpha ?? 0).toFixed(2);
+  const tEndValue = (bounds.duration ?? 0).toFixed(1);
+
   return (
-    <Canvas
-      camera={{ position: [4, 3, 8], fov: 45 }}
-      style={{ width: '100%', height: '100%', touchAction: 'none' }}
-      shadows
-      gl={{ preserveDrawingBuffer: true, antialias: true }}
-    >
-      <color attach="background" args={['#0f172a']} />
-      <RotationalKinematicsInner
-        timeSeries={timeSeries}
-        currentFrame={frameIndex}
-        parameters={parameters}
-        bounds={bounds}
-      />
-    </Canvas>
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <Canvas
+        camera={{ position: [4, 3, 8], fov: 45 }}
+        style={{ width: '100%', height: '100%', touchAction: 'none' }}
+        shadows
+        gl={{ preserveDrawingBuffer: true, antialias: true }}
+      >
+        <color attach="background" args={['#0f172a']} />
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[10, 20, 10]} intensity={1} castShadow />
+        <directionalLight position={[-5, 10, -5]} intensity={0.3} />
+
+        <RotationalKinematicsContent
+          timeSeries={timeSeries}
+          currentFrame={frameIndex}
+          parameters={parameters}
+        />
+
+        <OrbitControls
+          enablePan={true}
+          enableZoom={true}
+          enableRotate={true}
+          minZoom={0.5}
+          maxZoom={5}
+          target={[0, 0, 0]}
+        />
+      </Canvas>
+
+      {/* Screen-space overlay - time series values off to the side */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        zIndex: 10,
+        background: 'rgba(17, 24, 39, 0.95)',
+        padding: '16px',
+        borderRadius: '8px',
+        color: '#e2e8f0',
+        fontFamily: 'monospace',
+        fontSize: '13px',
+        lineHeight: '1.8',
+        border: '1px solid #374151',
+        minWidth: '220px',
+        pointerEvents: 'none',
+      }}>
+        <div style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '10px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Parameters</div>
+        <div>ω₀ = {omega0Value} rad/s</div>
+        <div>α = {alphaValue} rad/s²</div>
+        <div>t = {tEndValue} s</div>
+        {mass && <div>m = {Number(mass).toFixed(2)} kg</div>}
+        <div style={{ borderTop: '1px solid #374151', marginTop: '10px', paddingTop: '10px' }}>
+          <div style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Derived</div>
+          <div>I = {momentOfInertia.toFixed(3)} kg·m²</div>
+          <div>ω_max = {omegaMax.toFixed(2)} rad/s</div>
+        </div>
+        <div style={{ borderTop: '1px solid #374151', marginTop: '10px', paddingTop: '10px' }}>
+          <div style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current</div>
+          <div style={{ color: '#fbbf24', fontWeight: '600' }}>θ = {(currentTheta * 180 / Math.PI).toFixed(1)}°</div>
+          <div style={{ color: '#22c55e' }}>ω = {currentOmega.toFixed(2)} rad/s</div>
+          <div style={{ color: '#f97316' }}>α = {currentAlpha.toFixed(2)} rad/s²</div>
+          <div style={{ color: '#94a3b8' }}>t = {currentT.toFixed(2)} s</div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -38,6 +38,17 @@ SCENARIO CLASSIFICATION RULE (HIGHEST PRIORITY):
 - Look for: spring constant (k), mass (m), initial displacement (x₀ or A), initial velocity (v₀)
 - For vertical springs: equilibrium extension x_eq = mg/k may be shown
 
+**ROTATIONAL KINEMATICS DETECTION RULES:**
+- If problem mentions "rotates", "rotating", "spinning", "angular", "wheel", "disk", "flywheel", "pulley spins", "grindstone", "turntable", "rpm", "revolutions", "revolves", "turns through"
+- If diagram shows a rotating object (circle with axis, wheel, disk, pulley) with angle, angular velocity, or axis labels
+- Look for: angular velocity (ω or "rpm"), initial angular velocity (ω₀), angle (θ, "revolutions", or "turns"), angular acceleration (α), time (t), radius (r), torque (τ), moment of inertia (I)
+- UNITS: ALWAYS convert into SI when writing knowns:
+  - "300 rpm" → "omega0": "31.42 rad/s" (convert: value * 2*pi/60 = value * 0.10472)
+  - "X revolutions"/"X rev"/"X turns" → radians (convert: X * 2*pi)
+  - Keep the ORIGINAL units in a comment-free knowns entry using the raw key (e.g., "omega": "300 rpm") so nothing is lost
+- If only mass + radius (and no spring/incline), and the problem involves torque or angular acceleration → rotational_kinematics
+- NOTE: plain circular/centripetal motion problems (v²/r, orbits) WITHOUT angular quantities (ω, θ, α, rpm, revolutions) are NOT rotational_kinematics in this app's scope
+
 Scenario types:
 - projectile_motion: Object launched at angle, parabolic trajectory under gravity
 - kinematics_1d: Straight-line motion with constant acceleration (including on inclines if d+t given)
@@ -85,6 +96,24 @@ Example 6: Diagram shows a vertical spring with mass m = 0.1 kg, spring constant
 → knowns: {"mass": "0.1 kg", "k": "40 N/m", "g": "10 m/s^2", "v0": "0 m/s"}
 → unknowns: ["amplitude", "period", "omega"]
 → diagram_description: "Vertical spring initially unstretched, block attached and released"
+
+Example 7: "A wheel initially at rest rotates with constant angular acceleration 2.0 rad/s² for 5.0 s. Find the final angular velocity and the total angle turned."
+→ suggested_scenario: "rotational_kinematics"
+→ knowns: {"omega0": "0 rad/s", "alpha": "2.0 rad/s^2", "time": "5.0 s"}
+→ unknowns: ["omega", "theta"]
+→ diagram_description: "Wheel rotating about its center axis"
+
+Example 8: "A flywheel spinning at 300 rpm is slowed down by a constant torque. It comes to rest after turning through 8 revolutions."
+→ suggested_scenario: "rotational_kinematics"
+→ knowns: {"omega": "300 rpm", "delta_theta": "8 revolutions"}
+→ unknowns: ["alpha"]
+→ diagram_description: "Flywheel labeled with 300 rpm, braking torque indicated"
+
+Example 9: "A disk of radius 0.3 m and mass 2 kg experiences a torque of 4.0 N·m about its center. Find the angular acceleration."
+→ suggested_scenario: "rotational_kinematics"
+→ knowns: {"mass": "2 kg", "radius": "0.3 m", "torque": "4.0 N-m"}
+→ unknowns: ["alpha"]
+→ diagram_description: "Disk with radius labeled 0.3 m, torque arrow about center"
 
 Output STRICT JSON ONLY. No markdown, no explanations, no conversational text, no "Answer:" prefix, no "The problem text is", no "**Known Variables**", no bullet points, no headings. Do not wrap in code fences. Start immediately with { and end with }. Your entire response must be valid JSON and nothing else. Do not include any text before or after the JSON.
 

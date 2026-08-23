@@ -64,18 +64,53 @@ class NIMClient:
         return VisionOutput.model_validate(data)
 
     def _extract_known_values(self, vision_output: VisionOutput) -> dict:
-        """Extract numeric values from knowns dict for calculator variables."""
+        """Extract numeric values from knowns dict for calculator variables.
+
+        Also converts rotational units (rpm -> rad/s, revolutions -> radians)
+        and canonicalizes alias keys (initial_omega -> omega0, r -> radius, ...)
+        so downstream verification can rely on canonical names.
+        """
+        import math
+        import re
+
         knowns = {}
         if vision_output.knowns:
             for key, value in vision_output.knowns.items():
                 # Parse "20 m/s" -> 20.0
-                import re
                 match = re.match(r'^([\d.]+)', str(value).strip())
                 if match:
                     try:
-                        knowns[key] = float(match.group(1))
+                        num = float(match.group(1))
                     except ValueError:
-                        pass
+                        continue
+                else:
+                    continue
+                knowns[key] = num
+
+                raw = str(value).strip().lower()
+                # Rotational unit conversions (keep original key as-is too).
+                if "rpm" in raw:
+                    knowns["omega0"] = num * 2 * math.pi / 60  # rpm -> rad/s
+                elif any(u in raw for u in ("revolution", "rev", "turn")):
+                    knowns["delta_theta"] = num * 2 * math.pi  # revolutions -> rad
+                elif key in ("theta", "angle", "delta_theta") and "deg" in raw:
+                    knowns["delta_theta"] = num * math.pi / 180  # degrees -> rad
+
+            # Canonical aliases (scenario-agnostic).
+            alias_map = {
+                "omega0": ("omega0", "initial_omega", "initial_angular_velocity"),
+                "alpha": ("alpha", "angular_acceleration"),
+                "theta0": ("theta0", "initial_theta", "initial_angle"),
+                "radius": ("radius", "r", "disk_radius", "wheel_radius"),
+                "tau": ("tau", "torque", "net_torque"),
+            }
+            for canonical, aliases in alias_map.items():
+                if canonical in knowns:
+                    continue
+                for alias in aliases:
+                    if alias in knowns:
+                        knowns[canonical] = knowns[alias]
+                        break
         return knowns
 
     def _verify_and_correct(self, reasoning_output: ReasoningOutput, vision_output: VisionOutput, known_values: dict) -> ReasoningOutput:
@@ -197,12 +232,78 @@ class NIMClient:
                     params["distance_verified"] = dist
 
             elif scenario == "rotational_kinematics":
-                # Verify angular acceleration if torque and moment of inertia given
-                tau = known_values.get("torque") or params.get("torque")
-                I = known_values.get("I") or params.get("I")
+                import math
+
+                def _first(*vals):
+                    """First non-None value (0 is a valid physics value)."""
+                    for v in vals:
+                        if v is not None:
+                            return v
+                    return None
+
+                # --- Moment of inertia (from torque problems or mass+radius) ---
+                tau = _first(known_values.get("tau"), params.get("torque"))
+                I = _first(known_values.get("I"), params.get("I"))
+                mass = _first(known_values.get("mass"), params.get("mass"))
+                radius = _first(known_values.get("radius"), params.get("radius"))
+                object_type = params.get("object_type", "disk")
+
+                if I is None and mass is not None and radius is not None:
+                    if object_type == "hoop":
+                        I = Calculator.evaluate("mass * r**2", {"mass": mass, "r": radius})
+                    elif object_type == "sphere":
+                        I = Calculator.evaluate("0.4 * mass * r**2", {"mass": mass, "r": radius})
+                    elif object_type == "rod":
+                        I = Calculator.evaluate("(1/12) * mass * (2*r)**2", {"mass": mass, "r": radius})
+                    else:  # disk
+                        I = Calculator.evaluate("0.5 * mass * r**2", {"mass": mass, "r": radius})
+                    params["I_verified"] = I
+
                 if tau and I:
                     alpha_correct = Calculator.evaluate("tau / I", {"tau": tau, "I": I})
                     params["alpha_verified"] = alpha_correct
+                    if params.get("alpha") is None:
+                        params["alpha"] = alpha_correct  # fallback for time-series generation
+
+                # --- Kinematics verification ---
+                omega0 = _first(known_values.get("omega0"), params.get("omega0"))
+                alpha = _first(known_values.get("alpha"), params.get("alpha"), params.get("alpha_verified"))
+                theta0 = _first(known_values.get("theta0"), params.get("theta0"), 0.0)
+                delta_theta = _first(known_values.get("delta_theta"), params.get("delta_theta"))
+                t = _first(
+                    known_values.get("time"),
+                    known_values.get("t"),
+                    params.get("t_end"),
+                    params.get("time"),
+                    params.get("duration_s"),
+                )
+                if t is None and reasoning_output.animation_spec and reasoning_output.animation_spec.duration_s > 0:
+                    t = reasoning_output.animation_spec.duration_s
+
+                if omega0 is not None and alpha is not None:
+                    if t:
+                        omega_f = Calculator.evaluate("omega0 + alpha * t", {"omega0": omega0, "alpha": alpha, "t": t})
+                        theta_f = Calculator.evaluate(
+                            "theta0 + omega0 * t + 0.5 * alpha * t**2",
+                            {"theta0": theta0, "omega0": omega0, "alpha": alpha, "t": t},
+                        )
+                        params["omega_final_verified"] = omega_f
+                        params["theta_total_verified"] = theta_f
+                    elif delta_theta:
+                        # omega^2 = omega0^2 + 2*alpha*theta (t not given)
+                        omega_f = Calculator.evaluate(
+                            "sqrt(omega0**2 + 2 * alpha * delta_theta)",
+                            {"omega0": omega0, "alpha": alpha, "delta_theta": delta_theta},
+                        )
+                        params["omega_final_verified"] = omega_f
+
+                # Ensure canonical parameters exist so time-series regeneration works.
+                if params.get("omega0") is None and omega0 is not None:
+                    params["omega0"] = omega0
+                if params.get("theta0") is None and theta0 is not None:
+                    params["theta0"] = theta0
+                if params.get("alpha") is None and alpha is not None:
+                    params["alpha"] = alpha
 
             elif scenario == "mass_spring":
                 # Verify angular frequency and period
@@ -298,7 +399,7 @@ class NIMClient:
             t_full = np.linspace(0, duration, n_points).tolist()
 
             scenario = reasoning_output.scenario
-            params = self._normalize_parameters(reasoning_output.parameters)
+            params = self._normalize_parameters(reasoning_output.parameters, scenario=scenario)
 
             if scenario == "kinematics_1d":
                 # Constant acceleration: x = x0 + v0*t + 0.5*a*t^2, v = v0 + a*t
@@ -415,8 +516,8 @@ class NIMClient:
             elif scenario == "rotational_kinematics":
                 # Constant angular acceleration: theta = theta0 + omega0*t + 0.5*alpha*t^2
                 alpha = params.get("alpha", 0.0)
-                omega0 = params.get("omega0", params.get("initial_omega", 0.0))
-                theta0 = params.get("theta0", params.get("initial_theta", 0.0))
+                omega0 = params.get("omega0", 0.0)
+                theta0 = params.get("theta0", 0.0)
                 theta_full = [theta0 + omega0 * t + 0.5 * alpha * t * t for t in t_full]
                 omega_full = [omega0 + alpha * t for t in t_full]
                 alpha_full = [alpha] * n_points
@@ -577,12 +678,13 @@ class NIMClient:
 
         return reasoning_output
 
-    def _normalize_parameters(self, params: dict) -> dict:
+    def _normalize_parameters(self, params: dict, scenario: Optional[str] = None) -> dict:
         """Canonicalize parameter keys so downstream code can rely on v0/angle_deg/a.
 
         Reasoning models are inconsistent about naming (``angle`` vs ``angle_deg`` vs
         ``theta`` vs ``diagram_angle``). Silently defaulting to 45 degrees produced
-        wrong trajectories, so we normalize aliases here.
+        wrong trajectories, so we normalize aliases here. Rotational scenarios also
+        canonicalize omega0/alpha/theta0/radius.
         """
         import math
 
@@ -632,6 +734,64 @@ class NIMClient:
                 break
         if accel is not None:
             params["a"] = float(accel)
+
+        # Rotational: initial angular velocity (omega0).
+        omega0 = None
+        for key in ("omega0", "initial_omega", "initial_angular_velocity", "omega_initial"):
+            val = params.get(key)
+            if val is not None:
+                try:
+                    omega0 = float(val)
+                except (TypeError, ValueError):
+                    continue
+                break
+        if omega0 is None and scenario == "rotational_kinematics":
+            # For rotational problems a plain `omega` in parameters is the initial value.
+            try:
+                omega0 = float(params["omega"])
+            except (TypeError, ValueError, KeyError):
+                pass
+        if omega0 is not None:
+            params["omega0"] = float(omega0)
+
+        # Rotational: angular acceleration (alpha).
+        alpha = None
+        for key in ("alpha", "angular_acceleration"):
+            val = params.get(key)
+            if val is not None:
+                try:
+                    alpha = float(val)
+                except (TypeError, ValueError):
+                    continue
+                break
+        if alpha is not None:
+            params["alpha"] = float(alpha)
+
+        # Rotational: initial angle (theta0).
+        theta0 = None
+        for key in ("theta0", "initial_theta", "initial_angle"):
+            val = params.get(key)
+            if val is not None:
+                try:
+                    theta0 = float(val)
+                except (TypeError, ValueError):
+                    continue
+                break
+        if theta0 is not None:
+            params["theta0"] = float(theta0)
+
+        # Rotational: radius (r).
+        radius = None
+        for key in ("radius", "r", "disk_radius", "wheel_radius"):
+            val = params.get(key)
+            if val is not None:
+                try:
+                    radius = float(val)
+                except (TypeError, ValueError):
+                    continue
+                break
+        if radius is not None:
+            params["radius"] = float(radius)
 
         return params
 

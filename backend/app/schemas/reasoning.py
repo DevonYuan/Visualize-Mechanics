@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Literal, Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Any, Literal, Optional
 
 
 class AnimationSpec(BaseModel):
@@ -71,7 +71,33 @@ class ReasoningOutput(BaseModel):
         "energy_conservation",
         "conceptual_mc"
     ] = Field(..., description="Classified scenario")
-    parameters: dict[str, float] = Field(default_factory=dict, description="All parameters in SI units")
+    parameters: dict[str, Any] = Field(default_factory=dict, description="All parameters in SI units (numeric values coerced to float; non-numeric scene metadata like object_type kept as-is)")
+
+    @field_validator("parameters", mode="before")
+    @classmethod
+    def coerce_parameter_values(cls, raw):
+        """Coerce numeric strings to float but keep non-numeric values (e.g.
+
+        ``object_type: "disk"``) so the scene can render the right object.
+        Previously the dict was ``dict[str, float]`` which silently rejected
+        any string parameter and crashed the whole pipeline.
+        """
+        if not isinstance(raw, dict):
+            return raw
+        out = {}
+        for key, val in raw.items():
+            if isinstance(val, bool):
+                out[key] = val
+            elif isinstance(val, (int, float)):
+                out[key] = float(val)
+            elif isinstance(val, str):
+                try:
+                    out[key] = float(val)
+                except (TypeError, ValueError):
+                    out[key] = val  # e.g. "disk", "hoop"
+            else:
+                out[key] = val
+        return out
     animation_spec: Optional[AnimationSpec] = Field(None, description="Animation configuration")
     worked_solution: WorkedSolution = Field(..., description="Step-by-step worked solution")
     time_series: Optional[TimeSeries] = Field(None, description="Time-series data at 30 FPS")

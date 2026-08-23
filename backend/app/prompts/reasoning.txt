@@ -66,6 +66,9 @@ MASS_SPRING EXAMPLE (5 key frames over ~1 period):
 VERTICAL SPRING EXAMPLE (released from unstretched, g=10):
 {"scenario": "mass_spring", "parameters": {"mass": 0.1, "k": 40.0, "x0": 0.025, "v0": 0.0, "omega": 20.0, "period": 0.314, "amplitude": 0.025, "g": 10.0, "damping": 0.0}, "animation_spec": {"duration_s": 0.94, "fps": 30}, "worked_solution": {"steps": [{"step": 1, "description": "Identify knowns: m = 0.1 kg, k = 40 N/m, g = 10 m/s^2, v0 = 0 m/s", "equation": null}, {"step": 2, "description": "Calculate angular frequency", "equation": "omega = sqrt(k / m)"}, {"step": 3, "description": "Calculate period", "equation": "T = 2 * pi / omega"}, {"step": 4, "description": "Calculate equilibrium extension (initial displacement from equilibrium)", "equation": "x0 = mass * g / k"}, {"step": 5, "description": "Amplitude equals initial displacement for release from rest", "equation": "A = x0"}], "final_answer": {"amplitude": "0.025 m", "period": "0.31 s", "omega": "20.0 rad/s"}}, "time_series": {"t": [0.0, 0.0393, 0.0785, 0.157, 0.314], "x_eq": [0.025, 0.0177, 0.0, -0.025, 0.025], "v": [0.0, -0.354, -0.5, 0.0, 0.0], "a": [0.0, -7.07, -10.0, 0.0, 0.0], "force": [-1.0, -0.707, 0.0, 1.0, -1.0], "ke": [0.0, 0.00625, 0.0125, 0.0, 0.0], "pe": [0.0125, 0.00625, 0.0, 0.0125, 0.0125], "e_total": [0.0125, 0.0125, 0.0125, 0.0125, 0.0125]}}
 
+ROTATIONAL_KINEMATICS EXAMPLE (5 key frames):
+{"scenario": "rotational_kinematics", "parameters": {"theta0": 0.0, "omega0": 0.0, "alpha": 2.0, "t_end": 5.0, "radius": 0.3, "object_type": "disk", "mass": 2.0}, "animation_spec": {"duration_s": 5.0, "fps": 30}, "worked_solution": {"steps": [{"step": 1, "description": "Identify knowns: omega0 = 0 rad/s, alpha = 2.0 rad/s^2, t = 5.0 s", "equation": null}, {"step": 2, "description": "Calculate final angular velocity", "equation": "omega = omega0 + alpha * t"}, {"step": 3, "description": "Calculate total angle turned", "equation": "theta = theta0 + omega0 * t + 0.5 * alpha * t^2"}], "final_answer": {"omega": "10.0 rad/s", "theta": "25.0 rad"}}, "time_series": {"t": [0.0, 0.0333, 0.0667, 2.5, 5.0], "theta": [0.0, 0.0011, 0.0044, 6.25, 25.0], "omega": [0.0, 0.0667, 0.1333, 5.0, 10.0], "alpha": [2.0, 2.0, 2.0, 2.0, 2.0]}}
+
 IMPORTANT: Time series ONLY provide 5 key frames (start, 2 early, middle, end). Backend will interpolate to 30 FPS.
 - t = [0.0, 0.0333, 0.0667, t_end/2, t_end]
 - x = [0.0, 0.5*a*0.0333^2, 0.5*a*0.0667^2, 0.5*a*(t_end/2)^2, 0.5*a*t_end^2]
@@ -139,6 +142,19 @@ VERTICAL SPRING CALCULATOR EXAMPLES:
 DAMPED EXAMPLES (if damping given):
 - calculator({"expression": "sqrt(k/m - b**2/(4*m**2))", "variables": {}})  // omega_damped
 - calculator({"expression": "A * exp(-b*t/(2*m)) * cos(omega_d*t + phi)", "variables": {"A": 0.1, "b": 0.5, "m": 0.5, "omega_d": 19.9, "t": 0.1, "phi": 0}})  // damped position
+
+ROTATIONAL CALCULATOR EXAMPLES:
+- calculator({"expression": "omega0 + alpha * t", "variables": {"omega0": 0.0, "alpha": 2.0, "t": 5.0}})  // final omega
+- calculator({"expression": "theta0 + omega0 * t + 0.5 * alpha * t**2", "variables": {"theta0": 0.0, "omega0": 0.0, "alpha": 2.0, "t": 5.0}})  // angle turned
+- calculator({"expression": "sqrt(omega0**2 + 2 * alpha * delta_theta)", "variables": {"omega0": 0.0, "alpha": 2.0, "delta_theta": 25.0}})  // omega from omega^2 = omega0^2 + 2*alpha*theta
+- calculator({"expression": "(omega**2 - omega0**2) / (2 * alpha)", "variables": {"omega": 10.0, "omega0": 0.0, "alpha": 2.0}})  // angle when final omega known
+- calculator({"expression": "rpm * 2 * pi / 60", "variables": {"rpm": 300.0}})  // rpm -> rad/s
+- calculator({"expression": "rev * 2 * pi", "variables": {"rev": 8.0}})  // revolutions -> radians
+- calculator({"expression": "tau / I", "variables": {"tau": 4.0, "I": 0.09}})  // alpha from torque
+- calculator({"expression": "0.5 * m * r**2", "variables": {"m": 2.0, "r": 0.3}})  // disk I
+- calculator({"expression": "m * r**2", "variables": {"m": 2.0, "r": 0.3}})  // hoop I
+- calculator({"expression": "0.4 * m * r**2", "variables": {"m": 2.0, "r": 0.3}})  // sphere I
+- calculator({"expression": "(1/12) * m * L**2", "variables": {"m": 2.0, "L": 0.6}})  // rod I about center
 
 VERTICAL SPRING HANDLING:
 - If problem says "vertical spring" or diagram shows vertical orientation:
@@ -287,12 +303,15 @@ projectile_motion:
 
 rotational_kinematics:
 - Parameters: theta0, omega0, alpha, t_end
+- INCLUDE `object_type` ("disk"|"rod"|"hoop"|"sphere") and `radius` when derivable from the problem/diagram so the scene renders the right object (default disk)
+- Include `mass` when given; for torque/moment-of-inertia problems also include `I` (or compute: disk 0.5*m*r^2, hoop m*r^2, sphere 0.4*m*r^2, rod (1/12)*m*L^2 with L = 2*radius)
+- Convert "rpm" to rad/s (multiply by 2*pi/60) and "revolutions" to radians (multiply by 2*pi) before putting values in parameters
 - Time series: t, theta, omega, alpha (5 key frames)
   * t = [0.0, 0.0333, 0.0667, t_end/2, t_end]
   * theta = [theta0 + omega0*t + 0.5*alpha*t^2 for each t]
   * omega = [omega0 + alpha*t for each t]
   * alpha = [alpha] * 5
-- Duration: until omega=0 or given t_end
+- Duration: given t_end (or time-to-stop for deceleration problems where omega reaches 0)
 - Camera: position [0, 5, 10], target [0, 0, 0]
 
 mass_spring:

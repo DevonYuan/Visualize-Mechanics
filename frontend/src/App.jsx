@@ -3,6 +3,7 @@ import { useProblemStore } from './store/useProblemStore';
 import UploadScreen from './components/UploadScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ResultScreen from './components/ResultScreen';
+import TestRotational from './components/TestRotational';
 import TestMassSpring from './components/TestMassSpring';
 import './App.css';
 
@@ -10,6 +11,7 @@ function App() {
   const { uploadStatus, error, scenario } = useProblemStore();
   const [screen, setScreen] = useState('upload'); // 'upload', 'loading', 'result', 'test'
   const [testMode, setTestMode] = useState(false);
+  const [testScene, setTestScene] = useState('rotational'); // 'rotational' | 'mass_spring'
 
   // Sync screen with upload status
   useEffect(() => {
@@ -27,7 +29,27 @@ function App() {
   return (
     <div className="app">
       {testMode ? (
-        <TestMassSpring />
+        <>
+          {testScene === 'rotational' ? <TestRotational /> : <TestMassSpring />}
+          <button
+            onClick={() => setTestScene(testScene === 'rotational' ? 'mass_spring' : 'rotational')}
+            style={{
+              position: 'fixed',
+              bottom: '60px',
+              right: '20px',
+              padding: '8px 16px',
+              background: '#4b5563',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              zIndex: 1000,
+              fontSize: '12px'
+            }}
+          >
+            {testScene === 'rotational' ? 'Switch to Mass Spring' : 'Switch to Rotational'}
+          </button>
+        </>
       ) : (
         <>
           {screen === 'upload' && <UploadScreen />}
@@ -51,7 +73,7 @@ function App() {
           fontSize: '12px'
         }}
       >
-        {testMode ? 'Exit Test Mode' : 'Test Mass Spring System'}
+        {testMode ? 'Exit Test Mode' : 'Test Mode'}
       </button>
     </div>
   );
