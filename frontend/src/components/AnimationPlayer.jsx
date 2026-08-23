@@ -1,70 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useProblemStore } from '../store/useProblemStore';
 
-export default function AnimationPlayer() {
-  const {
-    timeSeries,
-    animationSpec,
-    currentTime,
-    isPlaying,
-    setCurrentTime,
-    setPlayState,
-  } = useProblemStore();
+/**
+ * @typedef {Object} AnimationPlayerProps
+ * @property {boolean} isPlaying
+ * @property {() => void} onPlayPause
+ * @property {() => void} onReset
+ * @property {number} duration
+ * @property {number} currentTime
+ * @property {(time: number) => void} setCurrentTime
+ */
 
+/** @param {AnimationPlayerProps} props */
+export default function AnimationPlayer({
+  isPlaying,
+  onPlayPause,
+  onReset,
+  duration,
+  currentTime,
+  setCurrentTime,
+}) {
   const [localTime, setLocalTime] = useState(currentTime);
-  const duration = animationSpec?.duration_s || timeSeries?.t?.[timeSeries.t.length - 1] || 1;
   const frameIntervalRef = useRef(null);
   const lastFrameTimeRef = useRef(0);
 
-  // Sync local time with store
+  // Sync local time with prop
   useEffect(() => {
     setLocalTime(currentTime);
   }, [currentTime]);
 
-  // Calculate current frame index
-  const currentFrameIndex = useCallback(() => {
-    if (!timeSeries?.t?.length) return 0;
-    const ratio = Math.min(Math.max(localTime / duration, 0), 1);
-    return Math.floor(ratio * (timeSeries.t.length - 1));
-  }, [timeSeries, localTime, duration]);
-
-  // Extract current frame data
-  const currentData = useCallback(() => {
-    if (!timeSeries) return {};
-    const idx = currentFrameIndex();
-    return {
-      t: timeSeries.t[idx],
-      x: timeSeries.x?.[idx],
-      y: timeSeries.y?.[idx],
-      z: timeSeries.z?.[idx],
-      vx: timeSeries.vx?.[idx],
-      vy: timeSeries.vy?.[idx],
-      vz: timeSeries.vz?.[idx],
-      v: timeSeries.v?.[idx],
-      ax: timeSeries.ax?.[idx],
-      ay: timeSeries.ay?.[idx],
-      az: timeSeries.az?.[idx],
-      a: timeSeries.a?.[idx],
-      y1: timeSeries.y1?.[idx],
-      y2: timeSeries.y2?.[idx],
-      theta: timeSeries.theta?.[idx],
-      omega: timeSeries.omega?.[idx],
-      alpha: timeSeries.alpha?.[idx],
-      ke: timeSeries.ke?.[idx],
-      pe: timeSeries.pe?.[idx],
-      e_total: timeSeries.e_total?.[idx],
-      x_eq: timeSeries.x_eq?.[idx],
-      force: timeSeries.force?.[idx],
-      f_normal: timeSeries.f_normal?.[idx],
-      f_friction: timeSeries.f_friction?.[idx],
-      tension: timeSeries.tension?.[idx],
-    };
-  }, [timeSeries, currentFrameIndex]);
-
   // Handle play/pause
   const handlePlayPause = useCallback(() => {
-    setPlayState(!isPlaying);
-  }, [isPlaying, setPlayState]);
+    onPlayPause();
+  }, [onPlayPause]);
 
   // Handle scrubber change
   const handleScrub = useCallback((e) => {
@@ -110,7 +77,7 @@ export default function AnimationPlayer() {
       return;
     }
 
-    const fps = animationSpec?.fps || 30;
+    const fps = 30;
     const frameTime = 1000 / fps;
 
     frameIntervalRef.current = setInterval(() => {
@@ -127,8 +94,7 @@ export default function AnimationPlayer() {
         setLocalTime(prev => {
           const newTime = prev + frameTime / 1000;
           if (newTime >= duration) {
-            setPlayState(false);
-            setCurrentTime(0);
+            onReset();
             return 0;
           }
           setCurrentTime(newTime);
@@ -143,7 +109,7 @@ export default function AnimationPlayer() {
         frameIntervalRef.current = null;
       }
     };
-  }, [isPlaying, duration, animationSpec?.fps, setCurrentTime, setPlayState]);
+  }, [isPlaying, duration, setCurrentTime, onReset]);
 
   return (
     <div className="animation-player">
@@ -184,7 +150,7 @@ export default function AnimationPlayer() {
 
         <button
           className="restart-btn"
-          onClick={() => { setLocalTime(0); setCurrentTime(0); setPlayState(false); }}
+          onClick={onReset}
           aria-label="Restart"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -197,19 +163,15 @@ export default function AnimationPlayer() {
           <span className="current-time">Time: {localTime.toFixed(2)}s</span>
           <span className="duration">/ {duration.toFixed(2)}s</span>
         </div>
-
-        <div className="frame-info" style={{ display: 'none' }}>
-          Frame: {currentFrameIndex() + 1} / {timeSeries?.t?.length || 0}
-        </div>
       </div>
 
       <style jsx>{`
         .animation-player {
-          background: rgba(15, 23, 42, 0.9);
+          background: white;
           border-radius: 12px;
           padding: 1.25rem;
-          backdrop-filter: blur(8px);
-          border: 1px solid #1e293b;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+          border: 1px solid #e2e8f0;
         }
         .timeline-container {
           margin-bottom: 1rem;
@@ -219,7 +181,7 @@ export default function AnimationPlayer() {
           height: 6px;
           -webkit-appearance: none;
           appearance: none;
-          background: #1e293b;
+          background: #e2e8f0;
           border-radius: 3px;
           outline: none;
           cursor: pointer;
@@ -259,8 +221,8 @@ export default function AnimationPlayer() {
           gap: 1rem;
         }
         .play-btn, .restart-btn {
-          width: 44px;
-          height: 44px;
+          width: 48px;
+          height: 48px;
           border-radius: 50%;
           border: none;
           cursor: pointer;
@@ -272,24 +234,29 @@ export default function AnimationPlayer() {
         .play-btn {
           background: #3b82f6;
           color: white;
+          box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
         }
         .play-btn:hover {
           background: #2563eb;
-          transform: scale(1.05);
+          transform: scale(1.08);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
         }
         .play-btn.playing {
           background: #ef4444;
+          box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
         }
         .play-btn.playing:hover {
           background: #dc2626;
+          box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
         }
         .restart-btn {
-          background: #1e293b;
-          color: #94a3b8;
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
         }
         .restart-btn:hover {
-          background: #334155;
-          color: white;
+          background: #e2e8f0;
+          color: #1e293b;
         }
         .time-display {
           margin-left: auto;
@@ -297,15 +264,15 @@ export default function AnimationPlayer() {
           align-items: center;
           gap: 0.25rem;
           font-variant-numeric: tabular-nums;
+          font-size: 0.875rem;
+          color: #475569;
         }
         .current-time {
-          color: #e2e8f0;
-          font-size: 0.95rem;
-          font-weight: 500;
+          font-weight: 600;
+          color: #1e293b;
         }
         .duration {
-          color: #64748b;
-          font-size: 0.95rem;
+          color: #94a3b8;
         }
         .frame-info {
           color: #64748b;

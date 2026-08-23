@@ -72,20 +72,20 @@ export default function ConceptualMCResult() {
           height: 100vh;
           display: flex;
           flex-direction: column;
-          background: #0f172a;
-          color: #e2e8f0;
+          background: #f8fafc;
+          color: #1e293b;
         }
         .result-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 1rem 1.5rem;
-          background: rgba(15, 23, 42, 0.95);
-          border-bottom: 1px solid #1e293b;
-          backdrop-filter: blur(8px);
+          background: white;
+          border-bottom: 1px solid #e2e8f0;
           position: sticky;
           top: 0;
           z-index: 10;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
         .header-left {
           display: flex;
@@ -96,32 +96,34 @@ export default function ConceptualMCResult() {
           margin: 0;
           font-size: 1.25rem;
           font-weight: 600;
+          color: #1e293b;
         }
         .scenario-badge {
-          background: #1e3a5f;
+          background: #eff6ff;
           color: #3b82f6;
           padding: 0.25rem 0.75rem;
           border-radius: 9999px;
           font-size: 0.75rem;
           font-weight: 600;
-          border: 1px solid #3b82f6;
+          border: 1px solid #bfdbfe;
         }
         .new-problem-btn {
           display: flex;
           align-items: center;
           gap: 0.5rem;
           padding: 0.5rem 1rem;
-          background: #1e293b;
-          color: #e2e8f0;
-          border: 1px solid #334155;
-          border-radius: 6px;
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
           cursor: pointer;
           font-size: 0.875rem;
           transition: all 0.2s;
         }
         .new-problem-btn:hover {
-          background: #334155;
-          border-color: #475569;
+          background: #e2e8f0;
+          color: #1e293b;
+          border-color: #cbd5e1;
         }
         .conceptual-content {
           flex: 1;
@@ -134,11 +136,11 @@ export default function ConceptualMCResult() {
         .answer-card {
           width: 100%;
           max-width: 700px;
-          background: rgba(15, 23, 42, 0.8);
-          border: 1px solid #1e293b;
+          background: white;
+          border: 1px solid #e2e8f0;
           border-radius: 12px;
           padding: 2rem;
-          backdrop-filter: blur(8px);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
         .answer-header {
           display: flex;
@@ -146,25 +148,26 @@ export default function ConceptualMCResult() {
           justify-content: space-between;
           margin-bottom: 1.5rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid #1e293b;
+          border-bottom: 1px solid #e2e8f0;
         }
         .answer-header h2 {
           margin: 0;
           font-size: 1.5rem;
           font-weight: 600;
+          color: #1e293b;
         }
         .correct-badge {
-          background: #064e3b;
-          color: #34d399;
+          background: #ecfdf5;
+          color: #059669;
           padding: 0.5rem 1rem;
           border-radius: 8px;
           font-weight: 600;
           font-size: 1rem;
-          border: 1px solid #065f46;
+          border: 1px solid #a7f3d0;
         }
         .correct-badge span {
           font-size: 1.25rem;
-          color: #6ee7b7;
+          color: #047857;
         }
         .steps {
           margin-bottom: 2rem;
@@ -174,19 +177,19 @@ export default function ConceptualMCResult() {
           gap: 1rem;
           padding: 1rem;
           margin-bottom: 1rem;
-          background: rgba(30, 41, 59, 0.5);
+          background: #f8fafc;
           border-radius: 8px;
-          border: 1px solid #1e293b;
+          border: 1px solid #e2e8f0;
         }
         .step-number {
           flex-shrink: 0;
-          background: #1e3a5f;
+          background: #eff6ff;
           color: #3b82f6;
           padding: 0.25rem 0.75rem;
           border-radius: 6px;
           font-size: 0.875rem;
           font-weight: 600;
-          border: 1px solid #3b82f6;
+          border: 1px solid #bfdbfe;
           min-width: 70px;
           text-align: center;
         }
@@ -196,32 +199,34 @@ export default function ConceptualMCResult() {
         .step-description {
           margin: 0 0 0.5rem 0;
           line-height: 1.6;
+          color: #1e293b;
         }
         .step-equation {
           margin: 0;
           font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
           font-size: 0.9rem;
-          color: #93c5fd;
-          background: rgba(30, 58, 95, 0.5);
+          color: #2563eb;
+          background: #eff6ff;
           padding: 0.5rem;
           border-radius: 4px;
-          border: 1px solid #1e3a5f;
+          border: 1px solid #bfdbfe;
         }
         .explanation {
-          background: rgba(30, 58, 95, 0.3);
-          border: 1px solid #1e3a5f;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
           border-radius: 8px;
           padding: 1.5rem;
         }
         .explanation h3 {
           margin: 0 0 1rem 0;
-          color: #93c5fd;
+          color: #2563eb;
           font-size: 1.1rem;
         }
         .explanation p {
           margin: 0;
           line-height: 1.7;
           font-size: 1.05rem;
+          color: #1e293b;
         }
       `}</style>
     </div>

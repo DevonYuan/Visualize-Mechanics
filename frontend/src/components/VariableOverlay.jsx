@@ -89,11 +89,11 @@ export default function VariableOverlay() {
 
       <style jsx>{`
         .variable-overlay {
-          background: rgba(15, 23, 42, 0.95);
+          background: white;
           border-radius: 12px;
           padding: 1rem;
-          backdrop-filter: blur(8px);
-          border: 1px solid #1e293b;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+          border: 1px solid #e2e8f0;
           min-width: 180px;
         }
         .overlay-header {
@@ -102,11 +102,11 @@ export default function VariableOverlay() {
           align-items: center;
           margin-bottom: 0.75rem;
           padding-bottom: 0.5rem;
-          border-bottom: 1px solid #334155;
+          border-bottom: 1px solid #e2e8f0;
         }
         .overlay-title {
           font-weight: 600;
-          color: #e2e8f0;
+          color: #1e293b;
           font-size: 0.875rem;
         }
         .overlay-time {
@@ -133,7 +133,7 @@ export default function VariableOverlay() {
         .variable-value {
           font-size: 0.95rem;
           font-weight: 500;
-          color: #e2e8f0;
+          color: #1e293b;
           font-variant-numeric: tabular-nums;
           font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         }
