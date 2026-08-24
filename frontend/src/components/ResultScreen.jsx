@@ -174,7 +174,7 @@ export default function ResultScreen() {
           position: absolute;
           top: 60px;
           left: 1.5rem;
-          z-index: 5;
+          z-index: 15;
           width: 300px;
           max-height: calc(100vh - 80px);
           overflow-y: auto;
