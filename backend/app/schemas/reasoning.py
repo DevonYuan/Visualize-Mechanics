@@ -46,6 +46,7 @@ class TimeSeries(BaseModel):
     theta: Optional[list[float]] = None
     omega: Optional[list[float]] = None
     alpha: Optional[list[float]] = None
+    torque: Optional[list[float]] = None
     # Energy
     ke: Optional[list[float]] = None
     pe: Optional[list[float]] = None
@@ -68,7 +69,7 @@ class ReasoningOutput(BaseModel):
         "collision_1d",
         "rotational_kinematics",
         "mass_spring",
-        "energy_conservation",
+        "torque",
         "conceptual_mc"
     ] = Field(..., description="Classified scenario")
     parameters: dict[str, Any] = Field(default_factory=dict, description="All parameters in SI units (numeric values coerced to float; non-numeric scene metadata like object_type kept as-is)")

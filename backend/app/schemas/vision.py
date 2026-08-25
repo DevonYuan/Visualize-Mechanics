@@ -15,7 +15,7 @@ class VisionOutput(BaseModel):
         "collision_1d",
         "rotational_kinematics",
         "mass_spring",
-        "energy_conservation",
+        "torque",
         "conceptual_mc",
         "unknown"
     ] = Field(..., description="Suggested scenario classification")

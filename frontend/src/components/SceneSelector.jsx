@@ -5,6 +5,7 @@ import AtwoodMachineScene from '../scenes/AtwoodMachineScene';
 import Collision1DScene from '../scenes/Collision1DScene';
 import RotationalKinematicsScene from '../scenes/RotationalKinematicsScene';
 import MassSpringScene from '../scenes/MassSpringScene';
+import TorqueScene from '../scenes/TorqueScene';
 
 export default function SceneSelector({ scenario, timeSeries, currentTime, duration, parameters }) {
   switch (scenario) {
@@ -26,6 +27,8 @@ export default function SceneSelector({ scenario, timeSeries, currentTime, durat
       return <RotationalKinematicsScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     case 'mass_spring':
       return <MassSpringScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
+    case 'torque':
+      return <TorqueScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     default:
       return <UnsupportedScene scenario={scenario} />;
   }

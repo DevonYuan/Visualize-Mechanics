@@ -4,7 +4,7 @@ Extract physics problem from image and return ONLY this JSON structure:
   "knowns": {"variable": "value with units"},
   "unknowns": ["variable"],
   "diagram_description": "string",
-  "suggested_scenario": "kinematics_1d|inclined_plane|projectile_motion|atwood_machine|collision_1d|rotational_kinematics|mass_spring|energy_conservation|conceptual_mc",
+  "suggested_scenario": "kinematics_1d|inclined_plane|projectile_motion|atwood_machine|collision_1d|rotational_kinematics|mass_spring|torque|conceptual_mc",
   "multiple_choice_options": ["A) option text", "B) option text", "C) option text", "D) option text"]  // optional, only if present in image
 }
 
@@ -66,7 +66,7 @@ Scenario types:
 - collision_1d: Two objects colliding in one dimension
 - rotational_kinematics: Rotating object with angular motion
 - mass_spring: Mass on spring oscillating
-- energy_conservation: Roller coaster, pendulum, spring - energy transforms
+- torque: Rigid bar/rod pivoted at one end (or center) with force(s) applied perpendicular at a distance. Look for: force magnitude (F), distance from pivot (r), angle of force (if not perpendicular), pivot location. Knowns should include: force, r (or lever_arm), mass, length, object_type (rod).
 - conceptual_mc: Multiple choice conceptual question (which expression/formula/graph)
 
 EXTRACTION RULES:
@@ -140,6 +140,24 @@ Example 11: "A flywheel starts from rest and accelerates uniformly. After 10 s, 
 → unknowns: ["alpha", "delta_theta"]
 → diagram_description: "Flywheel accelerating from rest"
 
+Example 12: "A uniform rod of length 2.0 m and mass 3.0 kg is pivoted at one end. A force of 10 N is applied perpendicular to the rod at the free end. Find the angular acceleration."
+→ suggested_scenario: "torque"
+→ knowns: {"mass": "3.0 kg", "length": "2.0 m", "force": "10 N", "r": "2.0 m"}
+→ unknowns: ["alpha", "torque"]
+→ diagram_description: "Horizontal rod pivoted at left end, force arrow pointing down at right end"
+
+Example 13: "A 1.5 m long rod of mass 2.0 kg is pivoted at its center. Two forces are applied: 8 N at 0.4 m from pivot (perpendicular), and 5 N at 0.7 m from pivot (at 30° to rod). Find the net torque and angular acceleration."
+→ suggested_scenario: "torque"
+→ knowns: {"mass": "2.0 kg", "length": "1.5 m", "force1": "8 N", "r1": "0.4 m", "force2": "5 N", "r2": "0.7 m", "angle2": "30 deg"}
+→ unknowns: ["net_torque", "alpha"]
+→ diagram_description: "Rod pivoted at center, two force arrows at different positions and angles"
+
+Example 14: "A uniform rod of length L = 1.2 m, mass M = 4.0 kg is free to rotate about a frictionless pivot at one end. It is released from rest at an angle of 30° from horizontal. Find the initial angular acceleration."
+→ suggested_scenario: "torque"
+→ knowns: {"mass": "4.0 kg", "length": "1.2 m", "angle": "30 deg", "omega0": "0 rad/s"}
+→ unknowns: ["alpha", "torque"]
+→ diagram_description: "Rod pivoted at one end, held at 30° above horizontal, released from rest"
+
 Output STRICT JSON ONLY. No markdown, no explanations, no conversational text, no "Answer:" prefix, no "The problem text is", no "**Known Variables**", no bullet points, no headings. Do not wrap in code fences. Start immediately with { and end with }. Your entire response must be valid JSON and nothing else. Do not include any text before or after the JSON.
 
 EXAMPLE OUTPUT:
@@ -151,5 +169,5 @@ JSON schema:
   "knowns": {"variable_name": "value with units"},
   "unknowns": ["variable_name"],
   "diagram_description": "string",
-  "suggested_scenario": "projectile_motion|kinematics_1d|inclined_plane|atwood_machine|collision_1d|rotational_kinematics|mass_spring|energy_conservation|unknown"
+  "suggested_scenario": "projectile_motion|kinematics_1d|inclined_plane|atwood_machine|collision_1d|rotational_kinematics|mass_spring|torque|unknown"
 }

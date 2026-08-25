@@ -1,0 +1,131 @@
+.animation-player {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid #334155;
+  color: #e2e8f0;
+}
+
+.timeline-container {
+  margin-bottom: 1rem;
+}
+
+.timeline-scrubber {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #334155;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.timeline-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.timeline-scrubber::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+}
+
+.timeline-scrubber::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: none;
+  cursor: pointer;
+}
+
+.timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.play-btn, .restart-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.play-btn {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.play-btn:hover {
+  background: #2563eb;
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+}
+
+.play-btn.playing {
+  background: #ef4444;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+
+.play-btn.playing:hover {
+  background: #dc2626;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.restart-btn {
+  background: #334155;
+  color: #94a3b8;
+  border: 1px solid #475569;
+}
+
+.restart-btn:hover {
+  background: #475569;
+  color: #e2e8f0;
+}
+
+.time-display {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.current-time {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.duration {
+  color: #94a3b8;
+}
+
+.frame-info {
+  color: #64748b;
+  font-size: 0.75rem;
+}

@@ -343,6 +343,75 @@ class NIMClient:
                                                             {"x0": x0, "v0": v0, "omega": omega_correct})
                         params["amplitude_verified"] = amp_correct
 
+            elif scenario == "torque":
+                # Verify torque, moment of inertia, and angular acceleration
+                mass = known_values.get("mass") or params.get("mass")
+                length = known_values.get("length") or params.get("length")
+                pivot_position = params.get("pivot_position", "end")
+                force = known_values.get("force") or params.get("force")
+                r = known_values.get("r") or known_values.get("lever_arm") or params.get("r") or params.get("lever_arm")
+                force_angle = known_values.get("force_angle") or params.get("force_angle")
+                
+                # Handle multiple forces
+                force1 = known_values.get("force1") or params.get("force1")
+                r1 = known_values.get("r1") or params.get("r1")
+                angle1 = known_values.get("force_angle1") or params.get("force_angle1")
+                force2 = known_values.get("force2") or params.get("force2")
+                r2 = known_values.get("r2") or params.get("r2")
+                angle2 = known_values.get("force_angle2") or params.get("force_angle2")
+
+                if mass and length:
+                    # Compute moment of inertia based on pivot position
+                    if pivot_position == "center":
+                        I_correct = Calculator.evaluate("(1/12) * mass * length**2",
+                                                      {"mass": mass, "length": length})
+                    else:  # end pivot
+                        I_correct = Calculator.evaluate("(1/3) * mass * length**2",
+                                                      {"mass": mass, "length": length})
+                    params["I_verified"] = I_correct
+                    params["I"] = I_correct
+
+                # Compute net torque
+                tau_net = 0.0
+                import math
+                # Single force case
+                if force is not None and r is not None:
+                    angle_rad = (force_angle * math.pi / 180) if force_angle else math.pi / 2
+                    tau = Calculator.evaluate("r * force * sin(angle)", {"r": r, "force": force, "angle": angle_rad})
+                    tau_net += tau
+                
+                # Multiple forces
+                if force1 is not None and r1 is not None:
+                    a1_rad = (angle1 * math.pi / 180) if angle1 else math.pi / 2
+                    tau1 = Calculator.evaluate("r1 * force1 * sin(angle1)", {"r1": r1, "force1": force1, "angle1": a1_rad})
+                    tau_net += tau1
+                if force2 is not None and r2 is not None:
+                    a2_rad = (angle2 * math.pi / 180) if angle2 else math.pi / 2
+                    tau2 = Calculator.evaluate("r2 * force2 * sin(angle2)", {"r2": r2, "force2": force2, "angle2": a2_rad})
+                    # Assume force2 direction is opposite (clockwise) if not specified
+                    tau_net -= tau2
+
+                if tau_net != 0:
+                    params["tau_net_verified"] = tau_net
+                    params["tau_net"] = tau_net
+
+                # Verify angular acceleration if we have both torque and I
+                if "I_verified" in params and "tau_net_verified" in params:
+                    alpha_correct = Calculator.evaluate("tau_net / I", 
+                                                      {"tau_net": params["tau_net_verified"], "I": params["I_verified"]})
+                    params["alpha_verified"] = alpha_correct
+                    params["alpha"] = alpha_correct
+
+                # Ensure canonical parameters
+                if params.get("theta0") is None:
+                    # Check if initial angle given (e.g., rod released from angle)
+                    init_angle = known_values.get("angle") or params.get("theta0")
+                    if init_angle:
+                        import math
+                        params["theta0"] = init_angle * math.pi / 180 if init_angle > 10 else init_angle
+                if params.get("omega0") is None:
+                    params["omega0"] = 0.0  # Typically starts from rest
+
             elif scenario == "collision_1d":
                 # Verify final velocities using conservation of momentum and restitution
                 m1 = known_values.get("m1") or params.get("m1")
@@ -531,6 +600,26 @@ class NIMClient:
                 ts.theta = theta_full
                 ts.omega = omega_full
                 ts.alpha = alpha_full
+
+            elif scenario == "torque":
+                # Constant angular acceleration: theta = theta0 + omega0*t + 0.5*alpha*t^2
+                # Use verified values if available
+                alpha = params.get("alpha_verified", params.get("alpha", 0.0))
+                omega0 = params.get("omega0", 0.0)
+                theta0 = params.get("theta0", 0.0)
+                theta_full = [theta0 + omega0 * t + 0.5 * alpha * t * t for t in t_full]
+                omega_full = [omega0 + alpha * t for t in t_full]
+                alpha_full = [alpha] * n_points
+                
+                # Torque is constant (net torque)
+                tau_net = params.get("tau_net_verified", params.get("tau_net", 0.0))
+                torque_full = [tau_net] * n_points
+                
+                ts.t = t_full
+                ts.theta = theta_full
+                ts.omega = omega_full
+                ts.alpha = alpha_full
+                ts.torque = torque_full
 
             elif scenario == "mass_spring":
                 # Simple harmonic motion: x = A*cos(omega*t + phi), v = -A*omega*sin(omega*t + phi)
