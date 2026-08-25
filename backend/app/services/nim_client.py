@@ -465,6 +465,35 @@ class NIMClient:
             else float(ts.t[-1])
         )
 
+        # For collision_1d, compute a proper duration if not provided by AI
+        # Duration = time before collision + collision + time after collision
+        scenario = reasoning_output.scenario
+        if scenario == "collision_1d":
+            params = self._normalize_parameters(reasoning_output.parameters, scenario=scenario)
+            m1 = params.get("m1", 1.0)
+            m2 = params.get("m2", 1.0)
+            v1_i = params.get("v1_initial", params.get("v1_i", 0.0))
+            v2_i = params.get("v2_initial", params.get("v2_i", 0.0))
+            e = params.get("restitution", 1.0)
+            x1_0 = params.get("initial_x1", params.get("x1_0", -5.0))
+            x2_0 = params.get("initial_x2", params.get("x2_0", 5.0))
+            
+            if abs(v1_i - v2_i) > 1e-6:
+                t_collision = (x2_0 - x1_0) / (v1_i - v2_i)
+                t_collision = max(0, t_collision)
+                # Ensure duration covers: pre-collision + collision moment + 2s post-collision
+                min_duration = t_collision + 2.5
+                if duration < min_duration:
+                    duration = min_duration
+            elif duration <= 0:
+                duration = 5.0  # fallback
+
+        # Update animation_spec with the computed duration
+        if reasoning_output.animation_spec:
+            reasoning_output.animation_spec.duration_s = duration
+        else:
+            reasoning_output.animation_spec = AnimationSpec(duration_s=duration, fps=fps)
+
         # Key frames (or fewer) -> regenerate analytically from normalized params.
         if len(ts.t) <= 5:
             n_points = int(fps * duration) + 1
