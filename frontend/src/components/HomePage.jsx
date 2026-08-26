@@ -135,53 +135,29 @@ export default function HomePage({ onGetStarted }) {
                   <pattern id="paper-grid" width="26" height="26" patternUnits="userSpaceOnUse">
                     <path d="M 26 0 L 0 0 0 26" fill="none" stroke="var(--paper-line)" strokeWidth="0.5"/>
                   </pattern>
+                  <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                    <path d="M0,0 L8,4 L0,8 z" fill="var(--red)"/>
+                  </marker>
                 </defs>
                 <rect width="600" height="460" fill="url(#paper-grid)"/>
-                
-                {/* Hand-drawn style physics diagram on paper */}
-                <g className="paper-diagram" stroke="var(--ink)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                  {/* Inclined plane */}
-                  <path d="M80 380 L280 200 L280 380 Z" fill="rgba(20,33,61,0.03)" strokeDasharray="4,3"/>
-                  <line x1="80" y1="380" x2="280" y2="200" strokeWidth="2"/>
-                  <line x1="80" y1="380" x2="280" y2="380"/>
-                  <line x1="280" y1="200" x2="280" y2="380"/>
-                  
-                  {/* Block on incline */}
-                  <rect x="155" y="245" width="35" height="35" rx="3" fill="rgba(193,68,58,0.15)" stroke="var(--red)" strokeWidth="1.5"/>
-                  
-                  {/* Force vectors */}
-                  <line x1="172.5" y1="230" x2="172.5" y2="190" stroke="var(--red)" strokeWidth="2" markerEnd="url(#arrowhead)"/>
-                  <line x1="172.5" y1="275" x2="172.5" y2="315" stroke="var(--ink)" strokeWidth="2" markerEnd="url(#arrowhead)"/>
-                  <line x1="140" y1="262.5" x2="190" y2="262.5" stroke="var(--ink)" strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#arrowhead)"/>
-                  
-                  {/* Angle arc */}
-                  <path d="M150 365 A 40 40 0 0 1 180 355" stroke="var(--ink-soft)" strokeWidth="1.5"/>
-                  <text x="165" y="350" fontFamily="var(--mono)" fontSize="11" fill="var(--ink-soft)" textAnchor="middle">θ</text>
-                  
-                  {/* Labels */}
-                  <text x="172.5" y="180" fontFamily="var(--mono)" fontSize="10" fill="var(--red)" textAnchor="middle" fontWeight="600">F₁</text>
-                  <text x="172.5" y="330" fontFamily="var(--mono)" fontSize="10" fill="var(--ink)" textAnchor="middle" fontWeight="600">mg</text>
-                  <text x="195" y="260" fontFamily="var(--mono)" fontSize="10" fill="var(--ink-soft)" textAnchor="middle">mg·sinθ</text>
-                  
-                  {/* Equations on side */}
-                  <g fontFamily="var(--mono)" fontSize="11" fill="var(--ink-soft)" fontWeight="500">
-                    <text x="340" y="120">F = mg·sinθ</text>
-                    <text x="340" y="140">a = g·sinθ</text>
-                    <text x="340" y="160">v² = 2as</text>
-                    <text x="340" y="180">t = √(2s/a)</text>
-                  </g>
-                  
-                  {/* Arrowhead marker */}
-                  <defs>
-                    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
-                      <path d="M0,0 L0,6 L8,3 Z" fill="currentColor"/>
-                    </marker>
-                  </defs>
-                </g>
-                
-                {/* Hand-written style labels */}
-                <text x="40" y="40" className="home-hand-label" style={{fontSize: '14px', transform: 'rotate(-3deg)'}}>Problem</text>
-                <text x="40" y="420" className="home-hand-label" style={{fontSize: '12px', transform: 'rotate(2deg)'}}>Photo</text>
+
+                {/* dotted trajectory sketch */}
+                <path
+                  d="M60 380 C 180 380, 220 90, 340 90 C 420 90, 460 220, 540 260"
+                  fill="none"
+                  stroke="var(--ink)"
+                  strokeWidth="2.5"
+                  strokeDasharray="1 9"
+                  strokeLinecap="round"
+                  opacity="0.75"
+                />
+                <circle cx="60" cy="380" r="6" fill="var(--ink)"/>
+                <line x1="60" y1="380" x2="150" y2="330" stroke="var(--red)" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+
+                {/* hand-written physics annotations */}
+                <text x="48" y="405" className="home-hand-label" style={{ fontSize: '20px' }}>v₀ = 20 m/s</text>
+                <text x="128" y="450" className="home-hand-label" style={{ fontSize: '20px' }}>θ = 45°</text>
+                <text x="360" y="120" className="home-hand-label" style={{ fontSize: '22px' }}>range = ?</text>
               </svg>
             </div>
 
@@ -254,8 +230,8 @@ export default function HomePage({ onGetStarted }) {
                 
                 {/* UI overlay */}
                 <g fontFamily="var(--mono)" fontSize="10" fill="rgba(89,230,196,0.7)">
-                  <text x="20" y="30">SIMULATION</text>
-                  <text x="20" y="440">t = 1.24s  ▶</text>
+                  <text x="50" y="30">SIMULATION</text>
+                  <text x="50" y="440">t = 1.24s  ▶</text>
                 </g>
               </svg>
             </div>
@@ -299,10 +275,7 @@ export default function HomePage({ onGetStarted }) {
               <div style={{fontSize: '10px', opacity: 0.7}}>Drag or use ← → keys</div>
             </div>
 
-            {/* Hand-written labels on compare widget */}
-            <span className="home-hand-label" style={{top: '14px', left: '14px', fontSize: '14px', transform: 'rotate(-3deg)'}}>Problem</span>
-            <span className="home-hand-label" style={{bottom: '14px', left: '14px', fontSize: '12px', transform: 'rotate(2deg)'}}>Photo</span>
-          </div>
+            </div>
         </div>
       </main>
     </div>

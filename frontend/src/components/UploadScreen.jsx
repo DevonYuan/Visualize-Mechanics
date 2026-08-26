@@ -185,12 +185,10 @@ export default function UploadScreen() {
             <li>Projectile Motion</li>
             <li>1D Kinematics</li>
             <li>Inclined Plane</li>
-            <li>Atwood Machine</li>
-            <li>Energy Conservation</li>
             <li>Mass-Spring Systems</li>
             <li>Rotational Kinematics</li>
             <li>Torque</li>
-            <li>Collisions</li>
+            <li>1D Collisions</li>
           </ul>
         </div>
       </div>

@@ -73,78 +73,88 @@ export default function LoadingScreen() {
           align-items: center;
           justify-content: center;
           padding: 2rem;
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          background: var(--space);
         }
         .loading-container {
           width: 100%;
-          max-width: 400px;
-          background: white;
+          max-width: 420px;
+          background: var(--ink);
+          border: 1px solid rgba(89, 230, 196, 0.15);
           border-radius: 16px;
-          padding: 3rem 2rem;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+          padding: 3rem 2.5rem;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(89, 230, 196, 0.1);
           text-align: center;
         }
         .spinner {
-          width: 60px;
-          height: 60px;
-          border: 4px solid #e2e8f0;
-          border-top-color: #4299e1;
+          width: 56px;
+          height: 56px;
+          border: 3px solid rgba(89, 230, 196, 0.15);
+          border-top-color: var(--trace);
           border-radius: 50%;
           animation: spin 1s linear infinite;
-          margin: 0 auto 1.5rem;
+          margin: 0 auto 1.75rem;
         }
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
         h2 {
           margin: 0 0 0.75rem;
-          color: #1a1a2e;
+          color: var(--white);
           font-size: 1.5rem;
+          font-family: var(--display);
+          font-weight: 600;
         }
         .loading-text {
           margin: 0 0 2rem;
-          color: #718096;
+          color: var(--ink-soft);
           font-size: 0.95rem;
-          line-height: 1.5;
+          line-height: 1.6;
+          font-family: var(--body);
         }
         .loading-steps {
           display: flex;
           flex-direction: column;
-          gap: 0.75rem;
+          gap: 0.625rem;
           text-align: left;
         }
         .step {
           display: flex;
           align-items: center;
-          gap: 1rem;
+          gap: 0.875rem;
           padding: 0.75rem 1rem;
-          background: #f7fafc;
-          border-radius: 8px;
+          background: rgba(89, 230, 196, 0.05);
+          border: 1px solid rgba(89, 230, 196, 0.1);
+          border-radius: 10px;
           transition: all 0.3s ease;
         }
         .step.active {
-          background: #ebf8ff;
+          background: rgba(89, 230, 196, 0.1);
+          border-color: rgba(89, 230, 196, 0.3);
         }
         .step-number {
-          width: 28px;
-          height: 28px;
+          width: 26px;
+          height: 26px;
           border-radius: 50%;
-          background: #cbd5e0;
-          color: #718096;
+          background: rgba(89, 230, 196, 0.15);
+          color: var(--trace);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.875rem;
+          font-size: 0.8125rem;
           font-weight: 600;
+          font-family: var(--mono);
           flex-shrink: 0;
+          border: 1px solid rgba(89, 230, 196, 0.2);
         }
         .step.active .step-number {
-          background: #4299e1;
-          color: white;
+          background: var(--trace);
+          color: var(--space);
+          border-color: var(--trace);
         }
         .step span:last-child {
-          color: #4a5568;
-          font-size: 0.95rem;
+          color: var(--white);
+          font-size: 0.9rem;
+          font-family: var(--body);
         }
         .error-state {
           display: flex;
@@ -152,14 +162,14 @@ export default function LoadingScreen() {
           align-items: center;
         }
         .error-icon {
-          color: #e53e3e;
+          color: var(--red);
           margin-bottom: 1rem;
         }
         .error-state h2 {
-          color: #c53030;
+          color: var(--red);
         }
         .error-state p {
-          color: #718096;
+          color: var(--ink-soft);
           margin: 0 0 1.5rem;
           text-align: center;
         }
@@ -171,27 +181,30 @@ export default function LoadingScreen() {
         .primary-btn, .secondary-btn {
           flex: 1;
           padding: 0.875rem;
-          border-radius: 8px;
-          font-size: 1rem;
+          border-radius: 10px;
+          font-size: 0.9375rem;
           font-weight: 600;
+          font-family: var(--body);
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
         }
         .primary-btn {
-          background: #4299e1;
-          color: white;
+          background: var(--trace);
+          color: var(--space);
           border: none;
         }
         .primary-btn:hover {
-          background: #3182ce;
+          background: #4dd9b4;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(89, 230, 196, 0.3);
         }
         .secondary-btn {
-          background: white;
-          color: #4299e1;
-          border: 2px solid #4299e1;
+          background: transparent;
+          color: var(--trace);
+          border: 2px solid var(--trace);
         }
         .secondary-btn:hover {
-          background: #ebf8ff;
+          background: rgba(89, 230, 196, 0.1);
         }
       `}</style>
     </div>
