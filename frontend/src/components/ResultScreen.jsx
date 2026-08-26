@@ -6,7 +6,7 @@ import VariableOverlay from './VariableOverlay';
 import ConceptualMCResult from './ConceptualMCResult';
 import ParametersDisplay from './ParametersDisplay';
 
-export default function ResultScreen() {
+export default function ResultScreen({ onNewProblem }) {
   const { 
     scenario, 
     parameters, 
@@ -32,7 +32,11 @@ export default function ResultScreen() {
   const duration = animationSpec?.duration_s || timeSeries?.t?.[timeSeries.t.length - 1] || 1;
 
   const handleNewProblem = () => {
-    reset();
+    if (onNewProblem) {
+      onNewProblem();
+    } else {
+      reset();
+    }
   };
 
   if (!scenario || !timeSeries) {

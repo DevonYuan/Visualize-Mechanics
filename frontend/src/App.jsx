@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useProblemStore } from './store/useProblemStore';
+import HomePage from './components/HomePage';
 import UploadScreen from './components/UploadScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ResultScreen from './components/ResultScreen';
 import './App.css';
 
 function App() {
-  const { uploadStatus, error, scenario } = useProblemStore();
-  const [screen, setScreen] = useState('upload');
+  const { uploadStatus, error, scenario, reset } = useProblemStore();
+  const [screen, setScreen] = useState('home');
 
   // Sync screen with upload status
   useEffect(() => {
-    if (uploadStatus === 'idle') {
+    if (uploadStatus === 'idle' && screen !== 'home') {
       setScreen('upload');
     } else if (uploadStatus === 'uploading' || uploadStatus === 'processing') {
       setScreen('loading');
@@ -22,11 +23,21 @@ function App() {
     }
   }, [uploadStatus]);
 
+  const handleGetStarted = () => {
+    setScreen('upload');
+  };
+
+  const handleNewProblem = () => {
+    reset();
+    setScreen('upload');
+  };
+
   return (
     <div className="app">
+      {screen === 'home' && <HomePage onGetStarted={handleGetStarted} />}
       {screen === 'upload' && <UploadScreen />}
       {screen === 'loading' && <LoadingScreen />}
-      {screen === 'result' && <ResultScreen />}
+      {screen === 'result' && <ResultScreen onNewProblem={handleNewProblem} />}
     </div>
   );
 }
