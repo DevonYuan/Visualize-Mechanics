@@ -39,9 +39,6 @@ class TimeSeries(BaseModel):
     v2: Optional[list[float]] = None
     a1: Optional[list[float]] = None
     a2: Optional[list[float]] = None
-    # Vertical positions (two objects for atwood_machine)
-    y1: Optional[list[float]] = None
-    y2: Optional[list[float]] = None
     # Rotational
     theta: Optional[list[float]] = None
     omega: Optional[list[float]] = None
@@ -65,7 +62,6 @@ class ReasoningOutput(BaseModel):
         "projectile_motion",
         "kinematics_1d",
         "inclined_plane",
-        "atwood_machine",
         "collision_1d",
         "rotational_kinematics",
         "mass_spring",

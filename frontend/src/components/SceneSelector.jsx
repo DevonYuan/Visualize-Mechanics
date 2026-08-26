@@ -1,7 +1,6 @@
 import ProjectileMotionScene from '../scenes/ProjectileMotionScene';
 import Kinematics1DScene from '../scenes/Kinematics1DScene';
 import InclinedPlaneScene from '../scenes/InclinedPlaneScene';
-import AtwoodMachineScene from '../scenes/AtwoodMachineScene';
 import Collision1DScene from '../scenes/Collision1DScene';
 import RotationalKinematicsScene from '../scenes/RotationalKinematicsScene';
 import MassSpringScene from '../scenes/MassSpringScene';
@@ -19,8 +18,6 @@ export default function SceneSelector({ scenario, timeSeries, currentTime, durat
       return <Kinematics1DScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     case 'inclined_plane':
       return <InclinedPlaneScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
-    case 'atwood_machine':
-      return <AtwoodMachineScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     case 'collision_1d':
       return <Collision1DScene timeSeries={timeSeries} currentTime={currentTime} duration={duration} parameters={parameters} />;
     case 'rotational_kinematics':

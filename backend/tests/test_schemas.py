@@ -41,7 +41,6 @@ class TestVisionOutput:
             "projectile_motion",
             "kinematics_1d",
             "inclined_plane",
-            "atwood_machine",
             "collision_1d",
             "rotational_kinematics",
             "mass_spring",

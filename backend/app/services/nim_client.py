@@ -190,20 +190,6 @@ class NIMClient:
                     params["range_verified"] = range_val
                     params["max_height_verified"] = h_max
 
-            elif scenario == "atwood_machine":
-                m1 = known_values.get("m1") or params.get("m1")
-                m2 = known_values.get("m2") or params.get("m2")
-
-                if m1 and m2:
-                    a_correct = Calculator.evaluate("(m1 - m2) * g / (m1 + m2)",
-                                                  {"m1": m1, "m2": m2})
-                    params["a_verified"] = a_correct
-                    
-                    # Verify tension
-                    tension_correct = Calculator.evaluate("2 * m1 * m2 * g / (m1 + m2)",
-                                                        {"m1": m1, "m2": m2})
-                    params["tension_verified"] = tension_correct
-
             elif scenario == "kinematics_1d":
                 # Handle case where distance and time are given (find acceleration)
                 d = known_values.get("d") or known_values.get("distance") or params.get("d") or params.get("distance")
@@ -586,35 +572,6 @@ class NIMClient:
                 ts.ax = ax_full
                 ts.ay = ay_full
                 ts.a = a_full
-
-            elif scenario == "atwood_machine":
-                # Constant acceleration: y1 = y1_0 + v0*t + 0.5*a*t^2 (downward positive for m1)
-                a = params.get("a", 0.0)
-                v0 = params.get("initial_v", params.get("v0", 0.0))
-                # Initial positions: m1 starts at some height, m2 at another
-                # For simplicity, assume y1=0 at top, y2=string_length at top
-                # Actually, we need to track both masses
-                # y1 increases (down), y2 decreases (up)
-                y1_0 = params.get("initial_y1", 0.0)
-                y2_0 = params.get("initial_y2", 2.0)  # string length
-                
-                y1_full = [y1_0 + v0 * t + 0.5 * a * t * t for t in t_full]
-                y2_full = [y2_0 - v0 * t - 0.5 * a * t * t for t in t_full]  # opposite direction
-                v_full = [v0 + a * t for t in t_full]
-                a_full = [a] * n_points
-                
-                # Tension is constant
-                m1 = params.get("m1", 1.0)
-                m2 = params.get("m2", 1.0)
-                g = params.get("g", 9.8)
-                tension = 2 * m1 * m2 * g / (m1 + m2) if (m1 + m2) > 0 else 0
-                
-                ts.t = t_full
-                ts.y1 = y1_full
-                ts.y2 = y2_full
-                ts.v = v_full
-                ts.a = a_full
-                ts.tension = [tension] * n_points
 
             elif scenario == "rotational_kinematics":
                 # Constant angular acceleration: theta = theta0 + omega0*t + 0.5*alpha*t^2

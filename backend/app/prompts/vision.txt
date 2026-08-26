@@ -4,7 +4,7 @@ Extract physics problem from image and return ONLY this JSON structure:
   "knowns": {"variable": "value with units"},
   "unknowns": ["variable"],
   "diagram_description": "string",
-  "suggested_scenario": "kinematics_1d|inclined_plane|projectile_motion|atwood_machine|collision_1d|rotational_kinematics|mass_spring|torque|conceptual_mc",
+  "suggested_scenario": "kinematics_1d|inclined_plane|projectile_motion|collision_1d|rotational_kinematics|mass_spring|torque|conceptual_mc",
   "multiple_choice_options": ["A) option text", "B) option text", "C) option text", "D) option text"]  // optional, only if present in image
 }
 
@@ -62,7 +62,6 @@ Scenario types:
 - projectile_motion: Object launched at angle, parabolic trajectory under gravity
 - kinematics_1d: Straight-line motion with constant acceleration (including on inclines if d+t given)
 - inclined_plane: Block on ramp with friction, forces decomposition (when NO d/t given)
-- atwood_machine: Two masses connected by string over pulley
 - collision_1d: Two objects colliding in one dimension
 - rotational_kinematics: Rotating object with angular motion
 - mass_spring: Mass on spring oscillating
@@ -169,5 +168,5 @@ JSON schema:
   "knowns": {"variable_name": "value with units"},
   "unknowns": ["variable_name"],
   "diagram_description": "string",
-  "suggested_scenario": "projectile_motion|kinematics_1d|inclined_plane|atwood_machine|collision_1d|rotational_kinematics|mass_spring|torque|unknown"
+  "suggested_scenario": "projectile_motion|kinematics_1d|inclined_plane|collision_1d|rotational_kinematics|mass_spring|torque|unknown"
 }

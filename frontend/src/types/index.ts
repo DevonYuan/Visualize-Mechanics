@@ -4,7 +4,6 @@ export type ScenarioType =
   | 'projectile_motion'
   | 'kinematics_1d'
   | 'inclined_plane'
-  | 'atwood_machine'
   | 'collision_1d'
   | 'rotational_kinematics'
   | 'mass_spring'
@@ -54,9 +53,6 @@ export interface TimeSeries {
   v2?: number[];
   a1?: number[];
   a2?: number[];
-  // Vertical positions (two objects for atwood_machine)
-  y1?: number[];
-  y2?: number[];
   // Rotational
   theta?: number[];
   omega?: number[];
