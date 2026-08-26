@@ -56,10 +56,7 @@ out/
 electron-builder.log
 
 # Coding Tool Setups
-.claude/
-
-# Old mobile app (to be removed)
-old_apps_to_delete/
+.agents/
 
 # Electron
 electron-dist/

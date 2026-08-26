@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visualize Mechanics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #E7E9DF;
+    --paper-line: rgba(20,33,61,0.14);
+    --ink: #14213D;
+    --ink-soft: rgba(20,33,61,0.62);
+    --space: #0A0F1E;
+    --trace: #59E6C4;
+    --red: #C1443A;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --hand: 'Kalam', cursive;
+    --maxw: 1120px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:var(--body);
+    color:var(--ink);
+    background:var(--paper);
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    flex-direction:column;
+  }
+  a{color:inherit;}
+  img,svg{display:block;max-width:100%;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px;width:100%;}
+  h1{font-family:var(--display);margin:0;line-height:1.05;letter-spacing:-0.01em;}
+  h1 em{font-style:normal;color:var(--red);}
+  p{margin:0;}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--body);
+    font-weight:600;
+    font-size:15px;
+    padding:13px 22px;
+    border-radius:8px;
+    border:1px solid transparent;
+    cursor:pointer;
+    text-decoration:none;
+    transition:transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--ink);color:var(--paper);}
+  .btn-primary:hover{background:#1c2c52;}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:rgba(20,33,61,0.3);}
+  .btn-ghost:hover{border-color:var(--ink);}
+
+  /* ---------- APP TITLEBAR / NAV ---------- */
+  header{
+    background:rgba(231,233,223,0.9);
+    border-bottom:1px solid var(--paper-line);
+    flex:0 0 auto;
+    -webkit-app-region: drag; /* lets this act as the window drag region in Electron */
+  }
+  nav.wrap{display:flex;align-items:center;justify-content:space-between;height:68px;}
+  .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:17px;text-decoration:none;color:var(--ink);}
+  .logo svg{width:26px;height:26px;}
+  .nav-links{display:flex;align-items:center;gap:26px;font-size:14.5px;font-weight:500;-webkit-app-region:no-drag;}
+  .nav-links a{text-decoration:none;color:var(--ink-soft);padding:6px 2px;border-bottom:2px solid transparent;}
+  .nav-links a.active{color:var(--ink);border-bottom-color:var(--red);}
+  .nav-links a:hover{color:var(--ink);}
+  .nav-right{display:flex;align-items:center;gap:14px;-webkit-app-region:no-drag;}
+  .status-pill{
+    display:flex;align-items:center;gap:7px;
+    font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);
+    border:1px solid var(--paper-line);border-radius:20px;padding:6px 12px;
+  }
+  .status-dot{width:7px;height:7px;border-radius:50%;background:#59C97F;}
+  .icon-btn{
+    width:36px;height:36px;border-radius:8px;border:1px solid var(--paper-line);
+    display:flex;align-items:center;justify-content:center;background:transparent;cursor:pointer;
+  }
+  .icon-btn:hover{border-color:var(--ink);}
+  .icon-btn svg{width:17px;height:17px;color:var(--ink-soft);}
+  @media (max-width:760px){.nav-links{display:none;}}
+
+  /* ---------- HERO / HOME SCREEN ---------- */
+  main{flex:1 1 auto;display:flex;align-items:center;padding:48px 0;}
+  .hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center;width:100%;}
+  @media (max-width:900px){.hero-grid{grid-template-columns:1fr;}}
+  h1{font-size:clamp(32px,4.6vw,50px);}
+  .hero p.sub{margin-top:20px;font-size:16.5px;line-height:1.6;color:var(--ink-soft);max-width:46ch;}
+  .hero-ctas{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap;}
+  .hero-note{margin-top:16px;font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);}
+
+  /* compare widget */
+  .compare{
+    position:relative;
+    width:100%;
+    aspect-ratio:6/5;
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid var(--paper-line);
+    box-shadow:0 24px 50px -20px rgba(10,15,30,0.35);
+    cursor:ew-resize;
+    user-select:none;
+    touch-action:none;
+  }
+  .layer{position:absolute;inset:0;}
+  .layer-paper{
+    background:
+      repeating-linear-gradient(var(--paper-line) 0 1px, transparent 1px 26px),
+      repeating-linear-gradient(90deg, var(--paper-line) 0 1px, transparent 1px 26px),
+      var(--paper);
+  }
+  .layer-sim{
+    background:radial-gradient(120% 140% at 15% 10%, #16234a 0%, var(--space) 60%);
+    clip-path: inset(0 0 0 55%);
+  }
+  .layer svg{width:100%;height:100%;}
+  .tag{
+    position:absolute;top:14px;
+    font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+    padding:5px 10px;border-radius:5px;z-index:5;pointer-events:none;
+  }
+  .tag-photo{left:14px;background:rgba(20,33,61,0.08);color:var(--ink);}
+  .tag-sim{right:14px;background:rgba(89,230,196,0.14);color:var(--trace);}
+  .handle{
+    position:absolute;top:0;bottom:0;left:55%;
+    width:2px;background:#fff;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.15);
+    z-index:6;pointer-events:none;
+  }
+  .handle .grip{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:38px;height:38px;border-radius:50%;
+    background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 14px rgba(0,0,0,0.25);
+  }
+  .grip svg{width:16px;height:16px;}
+  .readout{
+    position:absolute;bottom:14px;right:14px;z-index:5;pointer-events:none;
+    font-family:var(--mono);font-size:11.5px;color:var(--trace);
+    background:rgba(10,15,30,0.5);border:1px solid rgba(89,230,196,0.3);
+    border-radius:6px;padding:7px 10px;line-height:1.5;
+  }
+  .hand-label{
+    position:absolute;font-family:var(--hand);color:var(--red);pointer-events:none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap">
+    <a href="#" class="logo">
+      <svg viewBox="0 0 26 26" fill="none"><path d="M2 20 C 8 20, 8 6, 13 6 C 18 6, 18 20, 24 20" stroke="#14213D" stroke-width="2" stroke-linecap="round"/><circle cx="13" cy="6" r="2" fill="#C1443A"/></svg>
+      Visualize Mechanics
+    </a>
+    <div class="nav-links">
+      <a href="#" class="active">New problem</a>
+      <a href="#">History</a>
+      <a href="#">Scenarios</a>
+    </div>
+    <div class="nav-right">
+      <div class="status-pill"><span class="status-dot"></span> Local model connected</div>
+      <button class="icon-btn" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6"/></svg>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">High school mechanics, animated</p>
+      <h1>Photograph the problem.<br>Watch the <em>physics</em> happen.</h1>
+      <p class="sub">Snap a picture of any kinematics, forces, or energy problem. Visualize Mechanics works out the equations and hands you back an interactive 3D animation with every step of the solution laid out beside it.</p>
+      <div class="hero-ctas">
+        <a href="#" class="btn btn-primary">Upload a photo</a>
+        <a href="#" class="btn btn-ghost">Take a photo</a>
+      </div>
+      <p class="hero-note">Drag the divider below &nbsp;→&nbsp; problem sheet becomes simulation</p>
+    </div>
+
+    <div class="compare" id="compare">
+      <div class="layer layer-paper">
+        <svg viewBox="0 0 600 460" preserveAspectRatio="xMidYMid slice">
+          <path d="M60 380 C 180 380, 220 90, 340 90 C 420 90, 460 220, 540 260" fill="none" stroke="#14213D" stroke-width="2.5" stroke-dasharray="1 9" stroke-linecap="round" opacity="0.75"/>
+          <circle cx="60" cy="380" r="6" fill="#14213D"/>
+          <line x1="60" y1="380" x2="150" y2="330" stroke="#C1443A" stroke-width="2" marker-end="url(#arrow)"/>
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="#C1443A"/>
+            </marker>
+          </defs>
+        </svg>
+        <div class="hand-label" style="top:56%;left:8%;font-size:20px;">v₀ = 20 m/s</div>
+        <div class="hand-label" style="top:66%;left:22%;font-size:20px;">θ = 45°</div>
+        <div class="hand-label" style="top:20%;left:60%;font-size:22px;">range = ?</div>
+      </div>
+
+      <div class="layer layer-sim" id="simLayer">
+        <svg viewBox="0 0 600 460" preserveAspectRatio="xMidYMid slice">
+          <path id="motionPath" d="M60 380 C 180 380, 220 90, 340 90 C 420 90, 460 220, 540 260" fill="none" stroke="#59E6C4" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/>
+          <circle r="7" fill="#59E6C4">
+            <animateMotion dur="2.6s" repeatCount="indefinite" rotate="auto">
+              <mpath href="#motionPath"/>
+            </animateMotion>
+          </circle>
+          <circle cx="60" cy="380" r="4" fill="rgba(89,230,196,0.5)"/>
+          <circle cx="540" cy="260" r="4" fill="rgba(89,230,196,0.5)"/>
+        </svg>
+      </div>
+
+      <div class="tag tag-photo">Photo</div>
+      <div class="tag tag-sim">Simulation</div>
+      <div class="handle" id="handle" style="left:55%;">
+        <div class="grip">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 6L4 12L9 18M15 6L20 12L15 18" stroke="#14213D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="readout">t 1.42s&nbsp; x 24.6m&nbsp; y 11.8m&nbsp; vy −4.1m/s</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const compare = document.getElementById('compare');
+  const simLayer = document.getElementById('simLayer');
+  const handle = document.getElementById('handle');
+  let dragging = false;
+
+  function setPos(pct){
+    pct = Math.min(96, Math.max(4, pct));
+    simLayer.style.clipPath = `inset(0 0 0 ${pct}%)`;
+    handle.style.left = pct + '%';
+  }
+
+  function pctFromEvent(e){
+    const rect = compare.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    return ((clientX - rect.left) / rect.width) * 100;
+  }
+
+  compare.addEventListener('mousedown', e => { dragging = true; setPos(pctFromEvent(e)); });
+  compare.addEventListener('touchstart', e => { dragging = true; setPos(pctFromEvent(e)); }, {passive:true});
+  window.addEventListener('mousemove', e => { if(dragging) setPos(pctFromEvent(e)); });
+  window.addEventListener('touchmove', e => { if(dragging) setPos(pctFromEvent(e)); }, {passive:true});
+  window.addEventListener('mouseup', () => dragging = false);
+  window.addEventListener('touchend', () => dragging = false);
+
+  let start = null;
+  function introAnim(ts){
+    if(!start) start = ts;
+    const elapsed = ts - start;
+    const dur = 1400;
+    if(elapsed < dur && !dragging){
+      const t = elapsed / dur;
+      const eased = 1 - Math.pow(1 - t, 3);
+      setPos(85 - eased * 30);
+      requestAnimationFrame(introAnim);
+    } else if(!dragging){
+      setPos(55);
+    }
+  }
+  setPos(85);
+  requestAnimationFrame(introAnim);
+</script>
+
+</body>
+</html>

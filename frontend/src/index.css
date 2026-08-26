@@ -1,67 +1,180 @@
+/* ========================================
+   DESIGN SYSTEM - Visualize Mechanics
+   ======================================== */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Kalam:wght@400;700&display=swap');
+
 :root {
-  --text: #e2e8f0;
-  --text-h: #f1f5f9;
-  --bg: #0f172a;
-  --border: #1e293b;
-  --code-bg: #1e293b;
-  --accent: #3b82f6;
-  --accent-bg: rgba(59, 130, 246, 0.15);
-  --accent-border: rgba(59, 130, 246, 0.5);
-  --social-bg: rgba(30, 41, 59, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  /* Colors - Light/Paper Theme */
+  --paper: #E7E9DF;
+  --paper-line: rgba(20, 33, 61, 0.14);
+  --ink: #14213D;
+  --ink-soft: rgba(20, 33, 61, 0.62);
+  --space: #0A0F1E;
+  --trace: #59E6C4;
+  --red: #C1443A;
+  --green: #59C97F;
+  --white: #FFFFFF;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Typography */
+  --display: 'Space Grotesk', sans-serif;
+  --body: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+  --hand: 'Kalam', cursive;
 
-  font: 16px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  /* Layout */
+  --maxw: 1120px;
+  --nav-height: 68px;
+
+  /* Base */
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--paper);
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   margin: 0;
+  font-family: var(--body);
+  color: var(--ink);
+  background: var(--paper);
 }
 
 #root {
   width: 100%;
-  max-width: 100%;
-  margin: 0;
-  text-align: center;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--heading);
+  font-family: var(--display);
   font-weight: 600;
-  color: var(--text-h);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
   margin: 0;
+  color: var(--ink);
+}
+
+h1 em {
+  font-style: normal;
+  color: var(--red);
 }
 
 p {
   margin: 0;
 }
 
-code, .counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+/* Utility Classes */
+.wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 28px;
+  width: 100%;
 }
 
-code {
-  font-size: 14px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 13px 22px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--trace);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-primary:hover {
+  background: #1c2c52;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: rgba(20, 33, 61, 0.3);
+}
+
+.btn-ghost:hover {
+  border-color: var(--ink);
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--trace);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--paper);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ink-soft);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink);
+}
+
+/* Selection */
+::selection {
+  background: rgba(89, 230, 196, 0.3);
+  color: var(--ink);
 }
