@@ -10,49 +10,36 @@ function TorqueContent({ timeSeries, currentTime, parameters }) {
   // Wrench parameters
   const length = parameters?.length || 0.4; // wrench handle length (m)
 
-  // Ref to hold latest interpolated theta (updated via useMemo)
-  const currentThetaRef = useRef(0);
-
-  // Interpolated current theta (smooth animation between sparse keyframes)
-  useMemo(() => {
-    if (!timeSeries?.theta || !timeSeries?.t) {
-      currentThetaRef.current = 0;
-      return;
-    }
-    
+  // Compute frame index from currentTime (match AnimationPlayer's 30 FPS)
+  // This avoids floating-point interpolation issues that cause vibration
+  const currentFrame = useMemo(() => {
+    if (!timeSeries?.t?.length) return 0;
     const t = currentTime ?? 0;
     const times = timeSeries.t;
-    const thetas = timeSeries.theta;
-    
-    // Find the two keyframes to interpolate between
+    // Find the closest frame index (time series is at 30 FPS)
     let idx = times.findIndex(time => time >= t);
-    if (idx === -1) idx = times.length - 1;
-    if (idx === 0) {
-      currentThetaRef.current = thetas[0] ?? 0;
-      return;
-    }
-    
-    // Linear interpolation between keyframes
-    const t0 = times[idx - 1];
-    const t1 = times[idx];
-    const theta0 = thetas[idx - 1] ?? 0;
-    const theta1 = thetas[idx] ?? 0;
-    
-    if (t1 === t0) {
-      currentThetaRef.current = theta0;
-      return;
-    }
-    const factor = (t - t0) / (t1 - t0);
-    currentThetaRef.current = theta0 + (theta1 - theta0) * factor;
+    if (idx === -1) return times.length - 1;
+    if (idx === 0) return 0;
+    // Check which neighbor is closer
+    const prev = times[idx - 1];
+    const next = times[idx];
+    return (t - prev) < (next - t) ? idx - 1 : idx;
   }, [timeSeries, currentTime]);
 
-  // Animate rotation - reads from ref for latest value
+  // Current theta from time series (no interpolation needed - already at 30 FPS)
+  const currentTheta = useMemo(() => {
+    if (!timeSeries?.theta?.length) return 0;
+    const idx = Math.min(currentFrame, timeSeries.theta.length - 1);
+    return timeSeries.theta[idx] ?? 0;
+  }, [timeSeries, currentFrame]);
+
+  // Animate rotation - directly use computed theta
   useFrame(() => {
     if (wrenchRef.current) {
-      wrenchRef.current.rotation.z = currentThetaRef.current;
+      wrenchRef.current.rotation.z = currentTheta;
     }
     if (nutRef.current) {
-      nutRef.current.rotation.z = currentThetaRef.current;
+      nutRef.current.rotation.z = currentTheta;
     }
   });
 
