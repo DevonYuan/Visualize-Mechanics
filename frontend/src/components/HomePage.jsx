@@ -76,15 +76,8 @@ export default function HomePage({ onGetStarted }) {
             <span>Visualize Mechanics</span>
           </a>
           <div className="home-nav-links">
-            <a href="#" className="active" aria-current="page">New problem</a>
-            <a href="#">History</a>
-            <a href="#">Scenarios</a>
           </div>
           <div className="home-nav-right">
-            <div className="home-status-pill" aria-label="Connection status">
-              <span className="home-status-dot" aria-hidden="true"></span>
-              <span>Local model connected</span>
-            </div>
             <button className="home-icon-btn" aria-label="Settings">
               <svg viewBox="0 0 24 24" fill="none" width="17" height="17" aria-hidden="true">
                 <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
