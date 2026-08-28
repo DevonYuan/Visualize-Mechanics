@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.routes import router as solve_router
+from app.routes.settings import router as settings_router
 
 # Configure logging
 logging.basicConfig(
@@ -43,6 +44,7 @@ def create_app() -> FastAPI:
 
     # Routes
     app.include_router(solve_router)
+    app.include_router(settings_router)
 
     return app
 

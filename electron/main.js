@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 const http = require('http');
 
 let mainWindow;
@@ -19,37 +19,76 @@ function checkBackendReady(port) {
   });
 }
 
-function getPythonCommand() {
-  // Try to find the correct python/uvicorn path
+function getBackendExecutable() {
   const platform = process.platform;
-  if (platform === 'win32') {
-    return '"' + path.join(__dirname, '..', 'backend', 'venv', 'Scripts', 'python.exe') + '"';
+  const isPackaged = app.isPackaged;
+  
+  if (isPackaged) {
+    // In packaged app, the backend executable is in resources/backend
+    const resourcesPath = path.join(process.resourcesPath, 'backend');
+    if (platform === 'win32') {
+      return path.join(resourcesPath, 'visualize-backend.exe');
+    } else {
+      return path.join(resourcesPath, 'visualize-backend');
+    }
   } else {
-    return path.join(__dirname, '..', 'backend', 'venv', 'bin', 'python');
+    // In development, use the venv Python
+    if (platform === 'win32') {
+      return '"' + path.join(__dirname, '..', 'backend', 'venv', 'Scripts', 'python.exe') + '"';
+    } else {
+      return path.join(__dirname, '..', 'backend', 'venv', 'bin', 'python');
+    }
+  }
+}
+
+function getBackendWorkingDir() {
+  const isPackaged = app.isPackaged;
+  if (isPackaged) {
+    return path.join(process.resourcesPath, 'backend');
+  } else {
+    return path.join(__dirname, '..', 'backend');
   }
 }
 
 async function startBackend() {
   console.log('Starting backend server...');
-
-  const pythonCmd = getPythonCommand();
-
-  // Start the FastAPI backend using the venv python -m uvicorn
-  // Use exec for Windows to handle spaces in path
   const platform = process.platform;
-  let backendProcess;
-
-  if (platform === 'win32') {
-    const { exec } = require('child_process');
-    const backendDir = '"' + path.join(__dirname, '..', 'backend') + '"';
-    const command = `${pythonCmd} -m uvicorn app.main:app --port 3000`;
-    backendProcess = exec(command, { cwd: path.join(__dirname, '..', 'backend') });
+  const isPackaged = app.isPackaged;
+  const backendExe = getBackendExecutable();
+  const workingDir = getBackendWorkingDir();
+  
+  // Set VISUALIZE_ROOT so backend can find .env file
+  const env = { ...process.env };
+  if (isPackaged) {
+    env.VISUALIZE_ROOT = process.resourcesPath;
   } else {
-    const { spawn } = require('child_process');
-    backendProcess = spawn(pythonCmd, ['-m', 'uvicorn', 'app.main:app', '--port', '3000'], {
-      cwd: path.join(__dirname, '..', 'backend'),
-      shell: true
+    env.VISUALIZE_ROOT = path.join(__dirname, '..');
+  }
+
+  if (isPackaged) {
+    // In packaged app, run the PyInstaller-built executable
+    console.log(`Starting packaged backend: ${backendExe}`);
+    backendProcess = spawn(backendExe, [], {
+      cwd: workingDir,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      env: env
     });
+  } else {
+    // In development, use venv python -m uvicorn
+    const pythonCmd = getBackendExecutable();
+    console.log(`Starting development backend with: ${pythonCmd}`);
+    
+    if (platform === 'win32') {
+      const command = `${pythonCmd} -m uvicorn app.main:app --port 3000`;
+      backendProcess = exec(command, { cwd: workingDir, env: env });
+    } else {
+      backendProcess = spawn(pythonCmd, ['-m', 'uvicorn', 'app.main:app', '--port', '3000'], {
+        cwd: workingDir,
+        shell: true,
+        env: env
+      });
+    }
   }
 
   backendProcess.stdout?.on('data', (data) => {
@@ -58,6 +97,14 @@ async function startBackend() {
 
   backendProcess.stderr?.on('data', (data) => {
     console.error(`Backend stderr: ${data}`);
+  });
+
+  backendProcess.on('error', (err) => {
+    console.error(`Backend process error: ${err}`);
+  });
+
+  backendProcess.on('close', (code) => {
+    console.log(`Backend process exited with code ${code}`);
   });
 
   // Wait for backend to be ready

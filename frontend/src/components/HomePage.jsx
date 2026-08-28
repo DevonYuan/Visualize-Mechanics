@@ -1,16 +1,171 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getNIMKeyStatus, setNIMKey, deleteNIMKey, getDatabasePath } from '../api/settingsService';
 
 export default function HomePage({ onGetStarted }) {
   const [isVisible, setIsVisible] = useState(false);
   const [comparePosition, setComparePosition] = useState(55); // percentage from left
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [nimKeyStatus, setNimKeyStatus] = useState({ has_key: false, api_key: null });
+  const [nimKeyInput, setNimKeyInput] = useState('');
+  const [settingsError, setSettingsError] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSuccess, setSettingsSuccess] = useState(null);
+  const [dbPath, setDbPath] = useState('');
   const compareRef = useRef(null);
   const isDraggingRef = useRef(false);
+  const modalRef = useRef(null);
+  const inputRef = useRef(null);
+  const modalJustOpenedRef = useRef(false);
 
+  // Track mount/unmount
   useEffect(() => {
-    // Staggered entrance animation
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timer);
+    console.log('[HomePage] MOUNTED');
+    return () => console.log('[HomePage] UNMOUNTED');
   }, []);
+
+  // Load NIM key status on mount
+  useEffect(() => {
+    loadNIMKeyStatus();
+  }, []);
+
+  const loadNIMKeyStatus = async () => {
+    try {
+      const status = await getNIMKeyStatus();
+      setNimKeyStatus(status);
+    } catch (error) {
+      console.error('Failed to load NIM key status:', error);
+    }
+  };
+
+  const handleSaveNIMKey = async () => {
+    if (!nimKeyInput.trim()) {
+      setSettingsError('API key cannot be empty');
+      return;
+    }
+
+    setSettingsLoading(true);
+    setSettingsError(null);
+    setSettingsSuccess(null);
+
+    try {
+      await setNIMKey(nimKeyInput.trim());
+      setSettingsSuccess('NIM API key saved successfully');
+      setNimKeyInput('');
+      await loadNIMKeyStatus();
+    } catch (error) {
+      setSettingsError(error.message || 'Failed to save API key');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleDeleteNIMKey = async () => {
+    if (!window.confirm('Are you sure you want to delete the NIM API key?')) {
+      return;
+    }
+
+    setSettingsLoading(true);
+    setSettingsError(null);
+    setSettingsSuccess(null);
+
+    try {
+      await deleteNIMKey();
+      setSettingsSuccess('NIM API key deleted');
+      await loadNIMKeyStatus();
+    } catch (error) {
+      setSettingsError(error.message || 'Failed to delete API key');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // Track settingsOpen changes
+  useEffect(() => {
+    console.log('[Settings] settingsOpen changed to:', settingsOpen);
+  }, [settingsOpen]);
+
+  const openSettings = () => {
+    console.log('[Settings] openSettings called, settingsOpen=', settingsOpen);
+    setSettingsOpen(true);
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    // Prevent backdrop click from closing modal immediately after opening
+    // Use a longer delay (500ms) to account for any mousedown/mouseup timing issues
+    modalJustOpenedRef.current = true;
+    setTimeout(() => {
+      modalJustOpenedRef.current = false;
+    }, 500);
+    // Load NIM key status and database path
+    loadNIMKeyStatus();
+    getDatabasePath().then(data => setDbPath(data.path)).catch(() => setDbPath('Unable to load'));
+    // Focus the input after modal opens
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const closeSettings = () => {
+    console.log('[Settings] closeSettings called, settingsOpen=', settingsOpen);
+    setSettingsOpen(false);
+    setNimKeyInput('');
+    setSettingsError(null);
+    setSettingsSuccess(null);
+  };
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && settingsOpen) {
+        closeSettings();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [settingsOpen]);
+
+  // Trap focus in modal
+  useEffect(() => {
+    if (settingsOpen && modalRef.current) {
+      const getFocusableElements = () =>
+        Array.from(
+          modalRef.current.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetWidth > 0 || el.offsetHeight > 0);
+
+      const handleTab = (e) => {
+        if (e.key !== 'Tab') return;
+
+        const focusableElements = getFocusableElements();
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      };
+
+      // Focus first element when modal opens
+      setTimeout(() => {
+        const focusableElements = getFocusableElements();
+        focusableElements[0]?.focus();
+      }, 0);
+
+      document.addEventListener('keydown', handleTab);
+
+      return () => {
+        document.removeEventListener('keydown', handleTab);
+      };
+    }
+  }, [settingsOpen]);
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -78,7 +233,7 @@ export default function HomePage({ onGetStarted }) {
           <div className="home-nav-links">
           </div>
           <div className="home-nav-right">
-            <button className="home-icon-btn" aria-label="Settings">
+            <button className="home-icon-btn" aria-label="Settings" onClick={openSettings}>
               <svg viewBox="0 0 24 24" fill="none" width="17" height="17" aria-hidden="true">
                 <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
                 <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="1.6"/>
@@ -271,6 +426,111 @@ export default function HomePage({ onGetStarted }) {
             </div>
         </div>
       </main>
+
+      {/* Settings Modal */}
+      {settingsOpen && (
+        <div
+          className="modal-overlay"
+          onMouseDown={(e) => {
+            // Track if mousedown happened on overlay (not modal content)
+            if (e.target === e.currentTarget) {
+              modalJustOpenedRef.current = true;
+            }
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !modalJustOpenedRef.current) {
+              closeSettings();
+            }
+            // Reset the guard after click check
+            modalJustOpenedRef.current = false;
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-title"
+        >
+          <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 id="settings-title" className="modal-title">Settings</h2>
+              <button className="modal-close" onClick={closeSettings} aria-label="Close settings">
+                <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="settings-section">
+                <h3 className="settings-section-title">NVIDIA NIM API Key</h3>
+                <p className="settings-description">
+                  Enter your NVIDIA NIM API key to enable cloud-based AI vision and reasoning models.
+                  Get your key at <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer">build.nvidia.com</a>.
+                </p>
+
+                <div className="settings-status">
+                  <span className={`status-indicator ${nimKeyStatus.has_key ? 'status-connected' : 'status-disconnected'}`} />
+                  <span>
+                    {nimKeyStatus.has_key 
+                      ? `Connected (${nimKeyStatus.api_key})` 
+                      : 'Not configured'}
+                  </span>
+                </div>
+
+                <div className="settings-input-group">
+                  <label htmlFor="nim-api-key" className="settings-label">NIM API Key</label>
+                  <input
+                    ref={inputRef}
+                    id="nim-api-key"
+                    type="password"
+                    className="settings-input"
+                    placeholder="nvapi-..."
+                    value={nimKeyInput}
+                    onChange={(e) => setNimKeyInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !settingsLoading && handleSaveNIMKey()}
+                    disabled={settingsLoading}
+                    autoComplete="off"
+                  />
+                  <div className="settings-input-hint">
+                    Key is stored locally in an encrypted SQLite database on your device.
+                  </div>
+                </div>
+
+                {settingsError && (
+                  <div className="settings-error" role="alert">{settingsError}</div>
+                )}
+                {settingsSuccess && (
+                  <div className="settings-success" role="status">{settingsSuccess}</div>
+                )}
+
+                <div className="settings-actions">
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleSaveNIMKey}
+                    disabled={settingsLoading || !nimKeyInput.trim()}
+                  >
+                    {settingsLoading ? 'Saving...' : 'Save API Key'}
+                  </button>
+                  {nimKeyStatus.has_key && (
+                    <button
+                      className="btn btn-ghost btn-danger"
+                      onClick={handleDeleteNIMKey}
+                      disabled={settingsLoading}
+                    >
+                      Delete Key
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="settings-section">
+                <h3 className="settings-section-title">Database Location</h3>
+                <p className="settings-description">
+                  Your settings are stored in a local SQLite database at:
+                </p>
+                <code className="settings-db-path">{dbPath || 'Loading...'}</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
