@@ -4,6 +4,7 @@ import HomePage from './components/HomePage';
 import UploadScreen from './components/UploadScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ResultScreen from './components/ResultScreen';
+import TitleBar from './components/TitleBar';
 import './App.css';
 
 function App() {
@@ -47,10 +48,13 @@ function App() {
 
   return (
     <div className="app">
-      {screen === 'home' && <HomePage onGetStarted={handleGetStarted} />}
-      {screen === 'upload' && <UploadScreen />}
-      {screen === 'loading' && <LoadingScreen />}
-      {screen === 'result' && <ResultScreen onNewProblem={handleNewProblem} />}
+      <TitleBar />
+      <div className="app-content">
+        {screen === 'home' && <HomePage onGetStarted={handleGetStarted} />}
+        {screen === 'upload' && <UploadScreen />}
+        {screen === 'loading' && <LoadingScreen />}
+        {screen === 'result' && <ResultScreen onNewProblem={handleNewProblem} />}
+      </div>
     </div>
   );
 }

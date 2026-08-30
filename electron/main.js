@@ -80,10 +80,10 @@ async function startBackend() {
     console.log(`Starting development backend with: ${pythonCmd}`);
     
     if (platform === 'win32') {
-      const command = `${pythonCmd} -m uvicorn app.main:app --port 3000`;
+      const command = `${pythonCmd} -m uvicorn app.main_prod:app --port 3000`;
       backendProcess = exec(command, { cwd: workingDir, env: env });
     } else {
-      backendProcess = spawn(pythonCmd, ['-m', 'uvicorn', 'app.main:app', '--port', '3000'], {
+      backendProcess = spawn(pythonCmd, ['-m', 'uvicorn', 'app.main_prod:app', '--port', '3000'], {
         cwd: workingDir,
         shell: true,
         env: env
@@ -109,18 +109,22 @@ async function startBackend() {
 
   // Wait for backend to be ready
   console.log('Waiting for backend to start...');
+  sendBackendStatus({ status: 'starting', message: 'Starting backend server...' });
   let ready = false;
   for (let i = 0; i < 30; i++) {
     await new Promise(resolve => setTimeout(resolve, 1000));
     ready = await checkBackendReady(3000);
     if (ready) {
       console.log('Backend is ready!');
+      sendBackendStatus({ status: 'ready', message: 'Backend ready' });
       break;
     }
+    sendBackendStatus({ status: 'waiting', message: `Waiting for backend... (${i + 1}/30)` });
   }
 
   if (!ready) {
     console.error('Backend failed to start');
+    sendBackendStatus({ status: 'error', message: 'Backend failed to start' });
   }
 }
 
@@ -128,11 +132,21 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    frame: false,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#1a1a2e',
+      symbolColor: '#ffffff',
+      height: 32
+    },
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
       webSecurity: false
-    }
+    },
+    backgroundColor: '#1a1a2e',
+    show: false
   });
 
   // In development, load from Vite dev server
@@ -144,9 +158,43 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'));
   }
 
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+// IPC handlers for window controls
+ipcMain.on('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.on('window-close', () => {
+  if (mainWindow) mainWindow.close();
+});
+
+ipcMain.handle('window-is-maximized', () => {
+  return mainWindow ? mainWindow.isMaximized() : false;
+});
+
+// Send backend status to renderer
+function sendBackendStatus(status) {
+  if (mainWindow) {
+    mainWindow.webContents.send('backend-status', status);
+  }
 }
 
 app.on('ready', async () => {

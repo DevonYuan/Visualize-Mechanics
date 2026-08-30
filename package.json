@@ -26,6 +26,7 @@
       "output": "electron-dist",
       "buildResources": "electron/build"
     },
+    "compression": "store",
     "files": [
       "frontend/dist/**/*",
       "electron/**/*"

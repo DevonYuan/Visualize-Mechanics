@@ -4,7 +4,7 @@ block_cipher = None
 
 # Collect all Python files and dependencies
 a = Analysis(
-    ['app/main.py'],
+    ['app/main_prod.py'],
     pathex=[],
     binaries=[],
     datas=[
