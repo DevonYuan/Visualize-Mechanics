@@ -4,6 +4,11 @@ import { getNIMKeyStatus, setNIMKey, deleteNIMKey, getDatabasePath } from '../ap
 export default function HomePage({ onGetStarted }) {
   const [isVisible, setIsVisible] = useState(false);
   const [comparePosition, setComparePosition] = useState(55); // percentage from left
+  // Custom setter to trace all calls
+  const setSettingsOpenLogged = (value) => {
+    console.log('[Settings] setSettingsOpen called with:', value, 'stack:', new Error().stack?.split('\n').slice(1, 4).join('\n'));
+    setSettingsOpen(value);
+  };
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [nimKeyStatus, setNimKeyStatus] = useState({ has_key: false, api_key: null });
   const [nimKeyInput, setNimKeyInput] = useState('');
@@ -11,9 +16,11 @@ export default function HomePage({ onGetStarted }) {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(null);
   const [dbPath, setDbPath] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const compareRef = useRef(null);
   const isDraggingRef = useRef(false);
   const modalRef = useRef(null);
+  const modalOverlayRef = useRef(null);
   const inputRef = useRef(null);
   const modalJustOpenedRef = useRef(false);
 
@@ -59,11 +66,12 @@ export default function HomePage({ onGetStarted }) {
     }
   };
 
-  const handleDeleteNIMKey = async () => {
-    if (!window.confirm('Are you sure you want to delete the NIM API key?')) {
-      return;
-    }
+  const handleDeleteNIMKey = () => {
+    setDeleteConfirmOpen(true);
+  };
 
+  const handleDeleteConfirm = async () => {
+    setDeleteConfirmOpen(false);
     setSettingsLoading(true);
     setSettingsError(null);
     setSettingsSuccess(null);
@@ -85,14 +93,14 @@ export default function HomePage({ onGetStarted }) {
   }, [settingsOpen]);
 
   const openSettings = () => {
-    console.log('[Settings] openSettings called, settingsOpen=', settingsOpen);
-    setSettingsOpen(true);
+    console.log('[Settings] openSettings called, settingsOpen=', settingsOpen, 'guard=', modalJustOpenedRef.current);
+    // Guard already set on button mousedown
+    setSettingsOpenLogged(true);
     setSettingsError(null);
     setSettingsSuccess(null);
-    // Prevent backdrop click from closing modal immediately after opening
-    // Use a longer delay (500ms) to account for any mousedown/mouseup timing issues
-    modalJustOpenedRef.current = true;
+    // Clear guard after a delay to allow normal overlay clicks to close
     setTimeout(() => {
+      console.log('[Settings] guard timeout, setting to false');
       modalJustOpenedRef.current = false;
     }, 500);
     // Load NIM key status and database path
@@ -100,11 +108,49 @@ export default function HomePage({ onGetStarted }) {
     getDatabasePath().then(data => setDbPath(data.path)).catch(() => setDbPath('Unable to load'));
     // Focus the input after modal opens
     setTimeout(() => inputRef.current?.focus(), 100);
+    // Debug: check modal overlay DOM after render
+    setTimeout(() => {
+      const overlay = modalOverlayRef.current || document.querySelector('.modal-overlay');
+      if (overlay) {
+        const style = window.getComputedStyle(overlay);
+        console.log('[Settings] Modal overlay DOM found:', {
+          display: style.display,
+          visibility: style.visibility,
+          opacity: style.opacity,
+          position: style.position,
+          zIndex: style.zIndex,
+          width: style.width,
+          height: style.height,
+        });
+      } else {
+        console.log('[Settings] Modal overlay NOT in DOM!');
+      }
+    }, 0);
   };
 
-  const closeSettings = () => {
-    console.log('[Settings] closeSettings called, settingsOpen=', settingsOpen);
-    setSettingsOpen(false);
+  // Track modal overlay ref
+  useEffect(() => {
+    if (modalOverlayRef.current) {
+      console.log('[Settings] modalOverlayRef attached');
+      const observer = new MutationObserver(() => {
+        const style = window.getComputedStyle(modalOverlayRef.current);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+          console.log('[Settings] Modal overlay became hidden:', {
+            display: style.display,
+            visibility: style.visibility,
+            opacity: style.opacity,
+          });
+        }
+      });
+      observer.observe(modalOverlayRef.current, { attributes: true, attributeFilter: ['style', 'class'] });
+      return () => observer.disconnect();
+    }
+  }, [modalOverlayRef.current]);
+
+  const closeSettings = (source = 'unknown') => {
+    console.log('[Settings] closeSettings called from:', source, 'settingsOpen=', settingsOpen, 'guard=', modalJustOpenedRef.current);
+    setSettingsOpenLogged(false);
+    modalJustOpenedRef.current = false; // Clear guard on explicit close
     setNimKeyInput('');
     setSettingsError(null);
     setSettingsSuccess(null);
@@ -114,11 +160,20 @@ export default function HomePage({ onGetStarted }) {
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && settingsOpen) {
-        closeSettings();
+        closeSettings('escape-key');
       }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
+  }, [settingsOpen]);
+
+  // Track modal mount/unmount
+  useEffect(() => {
+    if (settingsOpen) {
+      console.log('[Settings] Modal MOUNTED');
+    } else {
+      console.log('[Settings] Modal UNMOUNTED');
+    }
   }, [settingsOpen]);
 
   // Trap focus in modal
@@ -233,7 +288,12 @@ export default function HomePage({ onGetStarted }) {
           <div className="home-nav-links">
           </div>
           <div className="home-nav-right">
-            <button className="home-icon-btn" aria-label="Settings" onClick={openSettings}>
+            <button
+              className="home-icon-btn"
+              aria-label="Settings"
+              onMouseDown={() => { modalJustOpenedRef.current = true; console.log('[Settings] button mousedown, guard=true'); }}
+              onClick={openSettings}
+            >
               <svg viewBox="0 0 24 24" fill="none" width="17" height="17" aria-hidden="true">
                 <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
                 <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="1.6"/>
@@ -430,19 +490,16 @@ export default function HomePage({ onGetStarted }) {
       {/* Settings Modal */}
       {settingsOpen && (
         <div
+          ref={modalOverlayRef}
           className="modal-overlay"
-          onMouseDown={(e) => {
-            // Track if mousedown happened on overlay (not modal content)
-            if (e.target === e.currentTarget) {
-              modalJustOpenedRef.current = true;
-            }
-          }}
           onClick={(e) => {
+            // Only close if clicking directly on the overlay (not modal content)
+            // and the modal has been open long enough (guard against initial click-through)
+            console.log('[Settings] overlay onClick:', e.target === e.currentTarget ? 'overlay' : 'content', 'guard=', modalJustOpenedRef.current);
             if (e.target === e.currentTarget && !modalJustOpenedRef.current) {
-              closeSettings();
+              console.log('[Settings] overlay click -> closing');
+              closeSettings('overlay-click');
             }
-            // Reset the guard after click check
-            modalJustOpenedRef.current = false;
           }}
           role="dialog"
           aria-modal="true"
@@ -451,7 +508,7 @@ export default function HomePage({ onGetStarted }) {
           <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 id="settings-title" className="modal-title">Settings</h2>
-              <button className="modal-close" onClick={closeSettings} aria-label="Close settings">
+              <button className="modal-close" onClick={() => closeSettings('close-button')} aria-label="Close settings">
                 <svg viewBox="0 0 24 24" fill="none" width="20" height="20" aria-hidden="true">
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                 </svg>
@@ -526,6 +583,45 @@ export default function HomePage({ onGetStarted }) {
                   Your settings are stored in a local SQLite database at:
                 </p>
                 <code className="settings-db-path">{dbPath || 'Loading...'}</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmOpen && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setDeleteConfirmOpen(false);
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+        >
+          <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 id="delete-confirm-title" className="modal-title">Delete API Key</h2>
+            </div>
+            <div className="modal-body">
+              <p className="confirm-message">Are you sure you want to delete the NIM API key? This action cannot be undone.</p>
+              <div className="confirm-actions">
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  autoFocus
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary btn-danger"
+                  onClick={handleDeleteConfirm}
+                  disabled={settingsLoading}
+                >
+                  {settingsLoading ? 'Deleting...' : 'Delete'}
+                </button>
               </div>
             </div>
           </div>

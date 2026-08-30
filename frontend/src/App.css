@@ -770,6 +770,7 @@
   justify-content: center;
   padding: 24px;
   z-index: 1000;
+  opacity: 1; /* base state - animation overrides if it runs */
   animation: fadeIn 0.15s ease;
 }
 
@@ -789,6 +790,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  opacity: 1; /* base state - animation overrides if it runs */
+  transform: translateY(0); /* base state */
   animation: slideUp 0.2s ease;
 }
 
@@ -1005,4 +1008,28 @@
   border-radius: var(--radius-sm);
   word-break: break-all;
   opacity: 0.9;
+}
+
+/* Confirmation Modal Styles */
+.modal-confirm {
+  max-width: 400px;
+}
+
+.confirm-message {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.6;
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirm-actions .btn {
+  min-width: 100px;
+  flex: 1;
 }
